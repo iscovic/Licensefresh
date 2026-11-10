@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LicenseFresh</title>
+<style>
+*{box-sizing:border-box}body{font-family:Arial;background:#eef2f5;margin:0}
+.top{background:#0a7a42;color:#fff;padding:20px;text-align:center}
+.box{max-width:900px;margin:20px auto;padding:0 15px}
+.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.row{display:flex;gap:10px}input{flex:1;padding:14px;font-size:16px;border:1.5px solid #ddd;border-radius:10px}
+button{padding:14px 20px;background:#0a7a42;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer}
+#status{margin-top:12px;padding:12px;border-radius:10px;display:none}
+#viewer{display:none;background:#fff;border-radius:12px;margin-top:16px;padding:20px}
+.badge{padding:6px 12px;border-radius:20px;font-weight:700;color:#fff}
+.valid{background:#0a7a42}.expired{background:#e67e22}.notfound{background:#c0392b}
+#licImg{width:100%;display:block;margin-top:16px;filter:contrast(1.15) brightness(1.05)}
+#pdfViewer{width:100%;height:600px;border:1px solid #ddd;margin-top:16px;border-radius:10px;display:none}
+</style>
+</head>
+<body>
+<div class="top"><h1>LicenseFresh</h1><p>Verify inside this app — no leaving</p></div>
+<div class="box">
+  <div class="card">
+    <b>LICENCE / PERMIT NUMBER</b>
+    <div class="row" style="margin-top:8px">
+      <input id="licNo" placeholder="e.g. BN14763/2025" value="BN14763/2025">
+      <button onclick="verify()">VERIFY →</button>
+    </div>
+    <div id="status"></div>
+  </div>
+
+  <div id="viewer">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <b id="vTitle"></b><span id="vBadge" class="badge"></span>
+    </div>
+    <p id="vDetails" style="color:#333;line-height:1.6"></p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button onclick="downloadLicence()" style="background:#111">⬇ Download & View Licence Inside App</button>
+      <button onclick="shareWhatsApp()" style="background:#25D366">Share on WhatsApp</button>
+    </div>
+
+    <!-- THIS IS WHERE PDF WILL SHOW INSIDE APP -->
+    <iframe id="pdfViewer"></iframe>
+
+    <input type="file" id="fileInput" accept="image/*,.pdf" style="margin-top:16px">
+    <p style="font-size:13px;color:#666">If NMDPRA gives no download link, download manually then upload it here to view sharpened inside the app.</p>
+    <img id="licImg">
+  </div>
+</div>
+
+<script>
+let current = null;
+const API = '/api/verify';
+
+async function verify(){
+  let lic = document.getElementById('licNo').value.trim();
+  if(!lic) return alert('Enter licence number');
+  let st = document.getElementById('status');
+  st.style.display='block'; st.style.background='#e6f9ec';
+  st.textContent='Verifying '+lic+' from NMDPRA inside LicenseFresh...';
+  document.getElementById('viewer').style.display='none';
+  document.getElementById('pdfViewer').style.display='none';
+  try{
+    let r = await fetch(API + '?permitNo=' + encodeURIComponent(lic));
+    let data = await r.json();
+    current = data;
+    if(!data.ok){
+      st.style.background='#ffecec'; st.textContent='✗ NOT FOUND on NMDPRA - '+lic;
+      return;
+    }
+    st.style.background='#e6f9ec'; st.textContent='✓ Verified from NMDPRA';
+    document.getElementById('viewer').style.display='block';
+    document.getElementById('vTitle').textContent='Licence: '+lic;
+    let badge=document.getElementById('vBadge');
+    badge.textContent=data.status; badge.className='badge '+(data.status==='VALID'?'valid':data.status==='EXPIRED'?'expired':'notfound');
+    document.getElementById('vDetails').innerHTML=`<b>Company:</b> ${data.company||'See NMDPRA record'}<br><b>Expiry:</b> ${data.expiry||'See NMDPRA record'}<br><b>Authenticity:</b> Confirmed from celps.nmdpra.gov.ng`;
+  }catch(e){
+    st.style.background='#ffecec'; st.textContent='Error: '+e.message+' - Backend not deployed yet?';
+  }
+}
+
+// ===== FIXED DOWNLOAD FUNCTION - ALREADY INCORPORATED =====
+function downloadLicence(){
+  if(!current || !current.proxyDownloadUrl){
+    return alert('No download link returned by NMDPRA for this licence. Use the Upload below with the file you downloaded.');
+  }
+  // Show PDF INSIDE app, no window.open, no leaving
+  let viewer = document.getElementById('pdfViewer');
+  viewer.style.display = 'block';
+  viewer.src = current.proxyDownloadUrl;
+  viewer.scrollIntoView({behavior:'smooth'});
+}
+// ===== END OF FIXED FUNCTION =====
+
+document.getElementById('fileInput').addEventListener('change', e=>{
+  let f=e.target.files[0]; if(!f) return;
+  document.getElementById('licImg').src=URL.createObjectURL(f);
+});
+function shareWhatsApp(){
+  let lic=document.getElementById('licNo').value;
+  window.open('https://wa.me/?text='+encodeURIComponent('LicenseFresh Verified:\nLicence: '+lic+'\nStatus: '+(current?.status||'Verified')),'_blank');
+}
+</script>
+</body>
+</html>
