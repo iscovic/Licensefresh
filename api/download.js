@@ -1,12 +1,13 @@
-const ALLOWED_HOST = "celps.nmdpra.gov.ng";
+const ALLOWED_HOSTS = new Set([
+  "celps.nmdpra.gov.ng",
+  "roms.nmdpra.gov.ng",
+]);
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   const rawUrl = req.query.url;
-  if (!rawUrl) {
-    return res.status(400).send("No URL");
-  }
+  if (!rawUrl) return res.status(400).send("No URL");
 
   let targetUrl;
   try {
@@ -15,7 +16,7 @@ export default async function handler(req, res) {
     return res.status(400).send("Invalid URL");
   }
 
-  if (targetUrl.protocol !== "https:" || targetUrl.hostname !== ALLOWED_HOST) {
+  if (targetUrl.protocol !== "https:" || !ALLOWED_HOSTS.has(targetUrl.hostname)) {
     return res.status(403).send("Forbidden host");
   }
 
@@ -23,8 +24,9 @@ export default async function handler(req, res) {
     const r = await fetch(targetUrl.href, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Referer": `https://${ALLOWED_HOST}/Permit/VerifyPermit`,
+        "Referer": "https://celps.nmdpra.gov.ng/Permit/VerifyPermit",
       },
+      redirect: "follow",
     });
 
     if (!r.ok) {
