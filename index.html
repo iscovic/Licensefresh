@@ -8,86 +8,103 @@
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f5;margin:0;color:#1f2937}
-.top{background:#0a7a42;color:#fff;padding:20px;text-align:center}
-.top p{margin:6px 0 0;opacity:.92}
-.box{max-width:920px;margin:20px auto;padding:0 15px}
-.card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.top{background:#0a7a42;color:#fff;padding:18px;text-align:center}
+.top p{margin:6px 0 0;opacity:.92;font-size:14px}
+.box{max-width:960px;margin:20px auto;padding:0 15px}
+.card,.stage{background:#fff;border-radius:12px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08);margin-top:16px}
+.card{margin-top:0}
 .row{display:flex;gap:10px;flex-wrap:wrap}
-input[type="text"]{flex:1;min-width:220px;padding:14px;font-size:16px;border:1.5px solid #ddd;border-radius:10px}
+input[type="text"]{flex:1;min-width:220px;padding:13px 14px;font-size:15px;border:1.5px solid #d1d5db;border-radius:10px}
 input[type="text"]:focus{outline:none;border-color:#0a7a42}
-button{padding:13px 18px;background:#0a7a42;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px}
+button{padding:12px 16px;background:#0a7a42;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px}
 button:disabled{opacity:.6;cursor:not-allowed}
-.btn-dirty{background:#0f4c81}
+.btn-blue{background:#0f4c81}
 .btn-dark{background:#111827}
 .btn-muted{background:#4b5563}
 .btn-wa{background:#25D366}
 #status{margin-top:12px;padding:12px;border-radius:10px;display:none;font-size:14px}
-#viewer,#docStage{background:#fff;border-radius:12px;margin-top:16px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
-#viewer{display:none}
-.badge{padding:6px 12px;border-radius:20px;font-weight:700;color:#fff;font-size:13px}
-.valid{background:#0a7a42}.expired{background:#e67e22}.notfound,.unknown{background:#c0392b}
-.details-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:14px 0;background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e5e7eb}
-.detail-item b{display:block;font-size:12px;color:#6b7280;text-transform:uppercase;margin-bottom:2px}
-.detail-item span{font-size:14px;color:#111827;word-break:break-word}
-.toolbar{display:none;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb}
+.fields-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb}
+.field label{display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px}
+.field input{width:100%;padding:9px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:8px}
+.toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
-#canvasWrap{margin-top:14px;display:flex;flex-direction:column;gap:14px;align-items:center}
-#canvasWrap canvas{max-width:100%;height:auto;border-radius:8px;border:1px solid #d1d5db;box-shadow:0 2px 10px rgba(0,0,0,.06)}
-.scan-filter{filter:contrast(1.35) brightness(1.15) saturate(1.05)}
-.empty-hint{text-align:center;color:#6b7280;padding:28px 12px;font-size:14px}
+#certWrap{display:flex;flex-direction:column;align-items:center;gap:14px}
+#certCanvas,#uploadedWrap canvas{max-width:100%;height:auto;border:1px solid #d1d5db;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+.scan-filter{filter:contrast(1.25) brightness(1.06)}
 </style>
 </head>
 <body>
 <div class="top">
   <h1>LicenseFresh</h1>
-  <p>View NMDPRA Licence Details, Render Inside App, Save JPEG &amp; Share on WhatsApp</p>
+  <p>NMDPRA Petroleum Storage &amp; Sales License Viewer, JPEG Saver &amp; WhatsApp Share</p>
 </div>
 
 <div class="box">
   <div class="card">
     <label for="licNo"><b>LICENCE / PERMIT NUMBER</b></label>
     <div class="row" style="margin-top:8px">
-      <input id="licNo" type="text" placeholder="Enter licence/permit number (optional if uploading)">
-      <button id="verifyBtn" type="button" onclick="verify()">VERIFY →</button>
-      <button type="button" class="btn-dirty" onclick="openUpload()">🧼 Upload Licence (Image / PDF)</button>
+      <input id="licNo" type="text" placeholder="Enter licence number (e.g. BR139739/2025) or leave empty">
+      <button id="verifyBtn" type="button" onclick="verify()">VERIFY &amp; RENDER →</button>
+      <button type="button" class="btn-blue" onclick="openUpload()">🧼 Upload Licence File</button>
     </div>
     <input id="fileInput" type="file" accept="image/*,.pdf,application/pdf" style="display:none">
     <div id="status"></div>
+
+    <div class="fields-grid">
+      <div class="field">
+        <label for="fCompany">Company Name</label>
+        <input id="fCompany" type="text" placeholder="e.g. NNPC RETAIL LTD">
+      </div>
+      <div class="field">
+        <label for="fCic">Company ID Code</label>
+        <input id="fCic" type="text" placeholder="e.g. 0002114">
+      </div>
+      <div class="field">
+        <label for="fCompanyAddr">Company Address ("of")</label>
+        <input id="fCompanyAddr" type="text" placeholder="Street, Zone, City, State">
+      </div>
+      <div class="field">
+        <label for="fProducts">Storage &amp; Products</label>
+        <input id="fProducts" type="text" placeholder="e.g. 45,000 litres of DPK; 45,000 litres of AGO; 135,000 litres of PMS">
+      </div>
+      <div class="field">
+        <label for="fPremises">Premises Address ("at")</label>
+        <input id="fPremises" type="text" placeholder="Premises location & State">
+      </div>
+      <div class="field">
+        <label for="fDated">Dated Line</label>
+        <input id="fDated" type="text" placeholder="e.g. Saturday, 29   Day of   MARCH 2025">
+      </div>
+      <div class="field">
+        <label for="fFee">Fee (₦)</label>
+        <input id="fFee" type="text" placeholder="e.g. 101,250.00 (One Hundred and One Thousand, Two Hundred and Fifty)">
+      </div>
+      <div class="field">
+        <label for="fExpiry">Expiry Date</label>
+        <input id="fExpiry" type="text" placeholder="e.g. 31 DECEMBER, 2026">
+      </div>
+    </div>
+    <div style="margin-top:10px;display:flex;justify-content:flex-end">
+      <button type="button" class="btn-muted" onclick="drawCertificate()">↻ Refresh Certificate Preview</button>
+    </div>
   </div>
 
-  <div id="viewer">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-      <b id="vTitle" style="font-size:18px"></b>
-      <span id="vBadge" class="badge"></span>
-    </div>
-
-    <div class="details-grid" id="vDetails"></div>
-
-    <div class="actions">
-      <button type="button" class="btn-dark" onclick="loadPortalLicenceInsideApp()">📄 Load Licence Inside App</button>
-      <button type="button" class="btn-wa" onclick="shareWhatsApp()">Share on WhatsApp</button>
-    </div>
-  </div>
-
-  <div id="docStage">
-    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-      <b>Licence Document Preview (Inside App)</b>
-      <span id="docMeta" style="font-size:13px;color:#6b7280">No licence loaded yet</span>
-    </div>
-
-    <div id="toolbar" class="toolbar">
-      <span id="modeLabel" style="font-size:13px;font-weight:700;color:#0a7a42">View: Enhanced Scan</span>
+  <div class="stage">
+    <div class="toolbar">
+      <div>
+        <b id="stageTitle" style="font-size:16px">Petroleum Storage And Sales License Preview</b>
+        <div id="stageSub" style="font-size:12px;color:#6b7280;margin-top:2px">Rendered inside app • Ready for JPEG download or WhatsApp sharing</div>
+      </div>
       <div class="actions">
-        <button type="button" class="btn-muted" onclick="toggleEnhancement()">Toggle Original / Enhanced</button>
+        <button type="button" class="btn-muted" onclick="toggleFilter()">Toggle Scan Filter</button>
         <button type="button" class="btn-dark" onclick="downloadJpeg()">⬇ Download JPEG</button>
         <button type="button" class="btn-wa" onclick="shareJpegOnWhatsApp()">📲 Share JPEG on WhatsApp</button>
       </div>
     </div>
 
-    <div id="canvasWrap">
-      <div id="emptyHint" class="empty-hint">
-        Upload a licence photo/PDF or click <b>Load Licence Inside App</b> after verifying to view the document here, download it as a JPEG, or share the JPEG on WhatsApp.
-      </div>
+    <div id="certWrap">
+      <canvas id="certCanvas" width="900" height="1273" class="scan-filter"></canvas>
+      <div id="uploadedWrap" style="width:100%;display:none;flex-direction:column;align-items:center;gap:14px"></div>
     </div>
   </div>
 </div>
@@ -99,24 +116,24 @@ if (window.pdfjsLib) {
 }
 
 const API = '/api/verify';
-const SCAN_FILTER = 'contrast(1.35) brightness(1.15) saturate(1.05)';
-
-let current = null;
-let enhanced = true;
-let baseName = 'licence';
-
-const licNoInput = document.getElementById('licNo');
-const verifyBtn = document.getElementById('verifyBtn');
+const certCanvas = document.getElementById('certCanvas');
+const uploadedWrap = document.getElementById('uploadedWrap');
 const fileInput = document.getElementById('fileInput');
 const statusEl = document.getElementById('status');
-const viewerEl = document.getElementById('viewer');
-const toolbarEl = document.getElementById('toolbar');
-const canvasWrap = document.getElementById('canvasWrap');
-const docMeta = document.getElementById('docMeta');
-const modeLabel = document.getElementById('modeLabel');
 
-licNoInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter') verify();
+let activeMode = 'certificate'; // 'certificate' | 'uploaded'
+let scanFilterOn = true;
+
+['licNo','fCompany','fCic','fCompanyAddr','fProducts','fPremises','fDated','fFee','fExpiry'].forEach((id) => {
+  const el = document.getElementById(id);
+  el.addEventListener('input', () => {
+    if (activeMode === 'certificate') drawCertificate();
+  });
+  if (id === 'licNo') {
+    el.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') verify();
+    });
+  }
 });
 
 function openUpload() {
@@ -125,233 +142,509 @@ function openUpload() {
 
 function setStatus(type, msg) {
   statusEl.style.display = 'block';
-  if (type === 'ok') {
-    statusEl.style.background = '#e6f9ec';
-    statusEl.style.color = '#064e2b';
-  } else {
-    statusEl.style.background = '#ffecec';
-    statusEl.style.color = '#7f1d1d';
-  }
+  statusEl.style.background = type === 'ok' ? '#e6f9ec' : '#ffecec';
+  statusEl.style.color = type === 'ok' ? '#064e2b' : '#7f1d1d';
   statusEl.textContent = msg;
 }
 
-function sanitizeName(name) {
-  return (String(name || 'licence').replace(/\.[^/.]+$/, '') || 'licence')
-    .replace(/[^a-zA-Z0-9_-]+/g, '_');
+function switchToCertificateMode() {
+  activeMode = 'certificate';
+  uploadedWrap.style.display = 'none';
+  certCanvas.style.display = 'block';
+  document.getElementById('stageTitle').textContent = 'Petroleum Storage And Sales License Preview';
+  document.getElementById('stageSub').textContent = 'Rendered inside app • Ready for JPEG download or WhatsApp sharing';
+  drawCertificate();
 }
 
 async function verify() {
-  const permitNo = licNoInput.value.trim();
-  if (!permitNo) {
-    setStatus('err', 'Please enter a licence or permit number, or upload a licence file.');
-    return;
-  }
-
-  verifyBtn.disabled = true;
-  setStatus('ok', `Checking ${permitNo} on NMDPRA...`);
-  viewerEl.style.display = 'none';
+  const permitNo = document.getElementById('licNo').value.trim();
+  const btn = document.getElementById('verifyBtn');
+  btn.disabled = true;
+  setStatus('ok', permitNo ? `Checking ${permitNo} on NMDPRA...` : 'Rendering certificate template...');
+  switchToCertificateMode();
 
   try {
-    const res = await fetch(`${API}?permitNo=${encodeURIComponent(permitNo)}`);
-    const data = await res.json();
-    current = data;
-
-    if (!res.ok || !data.ok) {
-      setStatus('err', data.error || `No record found for ${permitNo}.`);
-      return;
+    if (permitNo) {
+      const res = await fetch(`${API}?permitNo=${encodeURIComponent(permitNo)}`);
+      const data = await res.json();
+      if (res.ok && data.ok) {
+        if (data.company) document.getElementById('fCompany').value = data.company;
+        if (data.expiry) document.getElementById('fExpiry').value = data.expiry;
+        if (data.address) document.getElementById('fPremises').value = data.address;
+        setStatus('ok', `Retrieved record for ${permitNo} and updated certificate preview.`);
+      } else {
+        setStatus('err', data.error || `No live record returned for ${permitNo}; showing certificate with entered details.`);
+      }
     }
-
-    setStatus('ok', `Record retrieved for ${permitNo}.`);
-    baseName = sanitizeName(permitNo);
-    renderDetailsCard(permitNo, data);
   } catch (err) {
-    setStatus('err', `Could not reach verification API: ${err.message}`);
+    setStatus('err', `Lookup note: ${err.message}. Certificate preview is still available.`);
   } finally {
-    verifyBtn.disabled = false;
+    drawCertificate();
+    btn.disabled = false;
   }
 }
 
-function renderDetailsCard(permitNo, data) {
-  viewerEl.style.display = 'block';
-  document.getElementById('vTitle').textContent = `Permit / Licence: ${permitNo}`;
+function drawWatermarkCoatOfArms(ctx, cx, cy) {
+  ctx.save();
+  ctx.globalAlpha = 0.14;
+  ctx.translate(cx, cy);
 
-  const statusText = (data.status || 'UNKNOWN').toUpperCase();
-  const badge = document.getElementById('vBadge');
-  badge.textContent = statusText;
-  badge.className = 'badge ' + (
-    statusText === 'VALID' ? 'valid' :
-    statusText === 'EXPIRED' ? 'expired' :
-    statusText === 'NOT FOUND' ? 'notfound' : 'unknown'
-  );
+  // Supporters (left & right stylized horses)
+  ctx.fillStyle = '#9ca3af';
+  ctx.beginPath();
+  ctx.ellipse(-150, -25, 42, 95, -0.25, 0, Math.PI * 2);
+  ctx.ellipse(150, -25, 42, 95, 0.25, 0, Math.PI * 2);
+  ctx.fill();
 
-  const items = [
-    ['Licence / Permit No.', data.permitNo || permitNo],
-    ['Status', statusText],
-    ['Company Name', data.company || 'Not listed on page'],
-    ['Expiry Date', data.expiry || 'Not listed on page'],
-    ['Facility / Address', data.address || 'Not listed on page'],
-    ['Registry Source', 'celps.nmdpra.gov.ng']
+  // Shield
+  ctx.beginPath();
+  ctx.moveTo(-72, -65);
+  ctx.lineTo(72, -65);
+  ctx.lineTo(62, 55);
+  ctx.quadraticCurveTo(0, 108, 0, 108);
+  ctx.quadraticCurveTo(0, 108, -62, 55);
+  ctx.closePath();
+  ctx.fillStyle = '#d1d5db';
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#6b7280';
+  ctx.stroke();
+
+  // Black Y-pall inside shield
+  ctx.strokeStyle = '#4b5563';
+  ctx.lineWidth = 14;
+  ctx.beginPath();
+  ctx.moveTo(-58, -55);
+  ctx.lineTo(0, 0);
+  ctx.lineTo(58, -55);
+  ctx.moveTo(0, 0);
+  ctx.lineTo(0, 92);
+  ctx.stroke();
+
+  // Base ribbon
+  ctx.fillStyle = '#e5e7eb';
+  ctx.fillRect(-135, 112, 270, 26);
+  ctx.font = 'bold 12px Arial';
+  ctx.fillStyle = '#374151';
+  ctx.textAlign = 'center';
+  ctx.fillText('UNITY AND FAITH, PEACE AND PROGRESS', 0, 130);
+
+  ctx.restore();
+}
+
+function drawNmdpraEmblem(ctx, cx, cy) {
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // Outer gear teeth
+  const teeth = 16;
+  ctx.fillStyle = '#d4af37';
+  for (let i = 0; i < teeth; i++) {
+    const angle = (i * Math.PI * 2) / teeth;
+    ctx.save();
+    ctx.rotate(angle);
+    ctx.fillRect(-5, -42, 10, 10);
+    ctx.restore();
+  }
+
+  // Gear ring
+  ctx.beginPath();
+  ctx.arc(0, 0, 32, 0, Math.PI * 2);
+  ctx.fillStyle = '#15803d';
+  ctx.fill();
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = '#eab308';
+  ctx.stroke();
+
+  // Inner circle
+  ctx.beginPath();
+  ctx.arc(0, 0, 20, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+
+  // Flame / drop icon
+  ctx.beginPath();
+  ctx.moveTo(0, -13);
+  ctx.quadraticCurveTo(11, 2, 0, 13);
+  ctx.quadraticCurveTo(-11, 2, 0, -13);
+  ctx.fillStyle = '#dc2626';
+  ctx.fill();
+
+  ctx.font = 'bold 15px Arial';
+  ctx.fillStyle = '#111827';
+  ctx.textAlign = 'center';
+  ctx.fillText('NMDPRA', 0, 56);
+
+  ctx.restore();
+}
+
+function drawQrMock(ctx, x, y, size, seedText) {
+  ctx.save();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(x, y, size, size);
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(x, y, size, size);
+
+  const cells = 21;
+  const pad = 8;
+  const cell = (size - pad * 2) / cells;
+  let hash = 2166136261;
+  for (let i = 0; i < seedText.length; i++) {
+    hash ^= seedText.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  ctx.fillStyle = '#111827';
+  for (let r = 0; r < cells; r++) {
+    for (let c = 0; c < cells; c++) {
+      const inFinder =
+        (r < 7 && c < 7) ||
+        (r < 7 && c >= cells - 7) ||
+        (r >= cells - 7 && c < 7);
+      if (inFinder) continue;
+      hash ^= (r * 31 + c * 17);
+      hash = Math.imul(hash, 16777619);
+      if ((hash >>> 0) % 3 === 0) {
+        ctx.fillRect(
+          x + pad + c * cell,
+          y + pad + r * cell,
+          Math.ceil(cell * 0.92),
+          Math.ceil(cell * 0.92)
+        );
+      }
+    }
+  }
+
+  function drawFinder(fx, fy) {
+    const fSize = cell * 7;
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(fx, fy, fSize, fSize);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(fx + cell, fy + cell, fSize - cell * 2, fSize - cell * 2);
+    ctx.fillStyle = '#111827';
+    ctx.fillRect(fx + cell * 2, fy + cell * 2, fSize - cell * 4, fSize - cell * 4);
+  }
+
+  drawFinder(x + pad, y + pad);
+  drawFinder(x + pad + cell * (cells - 7), y + pad);
+  drawFinder(x + pad, y + pad + cell * (cells - 7));
+
+  ctx.restore();
+}
+
+function drawCertificate() {
+  const w = certCanvas.width;
+  const h = certCanvas.height;
+  const ctx = certCanvas.getContext('2d');
+
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, w, h);
+
+  // Outer & inner border frame
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = 4;
+  ctx.strokeRect(24, 24, w - 48, h - 48);
+  ctx.lineWidth = 1.5;
+  ctx.strokeRect(32, 32, w - 64, h - 64);
+
+  // Central watermark
+  drawWatermarkCoatOfArms(ctx, w / 2, h / 2 - 20);
+
+  // Top emblem
+  drawNmdpraEmblem(ctx, w / 2, 105);
+
+  // Titles
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#111827';
+  ctx.font = 'bold 20px "Times New Roman", Georgia, serif';
+  ctx.fillText('FEDERAL REPUBLIC OF NIGERIA', w / 2, 205);
+
+  ctx.font = 'bold 18px "Times New Roman", Georgia, serif';
+  ctx.fillText('PETROLEUM INDUSTRY ACT 2021', w / 2, 232);
+
+  ctx.fillStyle = '#c0392b';
+  ctx.font = 'bold 25px "Times New Roman", Georgia, serif';
+  ctx.fillText('Petroleum Storage And Sales License', w / 2, 268);
+
+  const licNo = document.getElementById('licNo').value.trim() || 'BR139739/2025';
+  const cic = document.getElementById('fCic').value.trim() || '0002114';
+  const company = document.getElementById('fCompany').value.trim() || 'NNPC RETAIL LTD';
+  const companyAddr = document.getElementById('fCompanyAddr').value.trim() || 'PLOT 2610, OFF YAKUBU GOWON WAY, CADASTRAL ZONE A04 ASOKORO, ABUJA FCT, LAGOS STATE';
+  const products = document.getElementById('fProducts').value.trim() || '45,000 (FORTY FIVE THOUSAND litres of DPK); 45,000 (FORTY FIVE THOUSAND litres of AGO); 135,000 (ONE HUNDRED AND THIRTY FIVE THOUSAND litres of PMS)';
+  const premises = document.getElementById('fPremises').value.trim() || 'ALONG AJAO ESTATE EJIGBO LINK ROAD, EJIGBO LAGOS STATE';
+  const dated = document.getElementById('fDated').value.trim() || 'Saturday, 29          Day of          MARCH 2025';
+  const fee = document.getElementById('fFee').value.trim() || '101,250.00 (One Hundred and One Thousand, Two Hundred and Fifty)';
+  const expiry = document.getElementById('fExpiry').value.trim() || '31 DECEMBER, 2026';
+
+  // Licence No & CIC right block
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#111827';
+  ctx.font = '15px "Times New Roman", Georgia, serif';
+  ctx.fillText('Licence No:', 490, 312);
+  ctx.font = 'bold 16px "Times New Roman", Georgia, serif';
+  ctx.fillText(licNo, 610, 312);
+  ctx.strokeStyle = '#6b7280';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(572, 316);
+  ctx.lineTo(820, 316);
+  ctx.stroke();
+
+  ctx.font = 'bold 15px "Times New Roman", Georgia, serif';
+  ctx.fillText('Company Identification Code:', 435, 342);
+  ctx.fillText(cic, 675, 342);
+  ctx.beginPath();
+  ctx.moveTo(652, 346);
+  ctx.lineTo(820, 346);
+  ctx.stroke();
+
+  // Grant line
+  ctx.font = '15px "Times New Roman", Georgia, serif';
+  ctx.fillText('Licence is hereby granted to:', 80, 386);
+  ctx.font = 'bold italic 16px "Times New Roman", Georgia, serif';
+  ctx.fillText(company, 285, 386);
+  drawRuledLine(ctx, 80, 392, 820);
+
+  // "of" company address
+  ctx.font = '15px "Times New Roman", Georgia, serif';
+  ctx.fillText('of', 80, 428);
+  ctx.font = 'bold 15px "Times New Roman", Georgia, serif';
+  ctx.fillText(companyAddr.slice(0, 68), 125, 428);
+  drawRuledLine(ctx, 115, 434, 820);
+  if (companyAddr.length > 68) {
+    ctx.fillText(companyAddr.slice(68), 115, 458);
+  }
+  drawRuledLine(ctx, 80, 464, 820);
+
+  // Storage of products
+  ctx.font = '15px "Times New Roman", Georgia, serif';
+  ctx.fillText('for the Storage of', 80, 496);
+  const prodParts = products.split(';').map((s) => s.trim()).filter(Boolean);
+  ctx.font = 'bold 15px "Times New Roman", Georgia, serif';
+  if (prodParts[0]) ctx.fillText(prodParts[0], 225, 496);
+  drawRuledLine(ctx, 215, 502, 820);
+
+  let rowY = 532;
+  for (let i = 1; i < 6; i++) {
+    if (prodParts[i]) {
+      ctx.fillText(prodParts[i], 140, rowY);
+    }
+    drawRuledLine(ctx, 80, rowY + 6, 820);
+    rowY += 32;
+  }
+
+  ctx.textAlign = 'center';
+  ctx.font = '13px "Times New Roman", Georgia, serif';
+  ctx.fillStyle = '#4b5563';
+  ctx.fillText('Name(s) of Product', w / 2, rowY + 12);
+
+  // Premises "at"
+  const premY = rowY + 52;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#111827';
+  ctx.font = '15px "Times New Roman", Georgia, serif';
+  ctx.fillText('at', 80, premY);
+  ctx.font = 'bold 15px "Times New Roman", Georgia, serif';
+  ctx.fillText(premises.slice(0, 72), 120, premY);
+  drawRuledLine(ctx, 110, premY + 6, 820);
+  if (premises.length > 72) {
+    ctx.fillText(premises.slice(72), 110, premY + 32);
+  }
+  drawRuledLine(ctx, 80, premY + 38, 820);
+
+  ctx.textAlign = 'center';
+  ctx.font = '13px "Times New Roman", Georgia, serif';
+  ctx.fillStyle = '#4b5563';
+  ctx.fillText('Address of Premises', w / 2, premY + 54);
+
+  // Statutory paragraph
+  const legalY = premY + 86;
+  ctx.textAlign = 'left';
+  ctx.fillStyle = '#111827';
+  ctx.font = '13.5px "Times New Roman", Georgia, serif';
+  const legalLines = [
+    'This Licence is issued subject to the conditions prescribed in the Petroleum Industry Act 2021 and the',
+    'regulations thereunder, now in force or which may come into force during the validity period of the',
+    'licence.',
+    'This Licence shall expire on the 31st day of December, following the date of issue hereof, and may be',
+    'renewed on application being made for this purpose not later than 30 days to the date of expiry.'
   ];
+  legalLines.forEach((line, idx) => {
+    ctx.fillText(line, 80, legalY + idx * 19);
+  });
 
-  document.getElementById('vDetails').innerHTML = items.map(([k, v]) => `
-    <div class="detail-item">
-      <b>${escapeHtml(k)}</b>
-      <span>${escapeHtml(v)}</span>
-    </div>
-  `).join('');
+  // Dated, Fee, Expiry
+  const metaY = legalY + 125;
+  ctx.font = '15px "Times New Roman", Georgia, serif';
+  ctx.fillText('Dated', 80, metaY);
+  ctx.font = 'bold 15px "Times New Roman", Georgia, serif';
+  ctx.fillText(dated, 145, metaY);
+  drawRuledLine(ctx, 138, metaY + 5, 820);
+
+  ctx.font = 'bold 15px "Times New Roman", Georgia, serif';
+  ctx.fillText('FEE ₦:', 80, metaY + 34);
+  ctx.fillText(fee, 145, metaY + 34);
+  drawRuledLine(ctx, 138, metaY + 39, 820);
+
+  ctx.font = 'bold 15px "Times New Roman", Georgia, serif';
+  ctx.fillText('EXPIRY DATE:', 80, metaY + 68);
+  ctx.fillText(expiry, 210, metaY + 68);
+  drawRuledLine(ctx, 200, metaY + 73, 820);
+
+  // Bottom QR & Authority Chief Executive signature
+  const footY = metaY + 95;
+  drawQrMock(ctx, 85, footY, 125, `${licNo}|${company}|${expiry}`);
+
+  ctx.save();
+  ctx.strokeStyle = '#1d4ed8';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(575, footY + 62);
+  ctx.bezierCurveTo(600, footY + 25, 615, footY + 85, 635, footY + 42);
+  ctx.bezierCurveTo(655, footY + 20, 675, footY + 72, 710, footY + 48);
+  ctx.stroke();
+  ctx.restore();
+
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(525, footY + 86);
+  ctx.lineTo(820, footY + 86);
+  ctx.stroke();
+
+  ctx.textAlign = 'center';
+  ctx.font = '14px "Times New Roman", Georgia, serif';
+  ctx.fillStyle = '#111827';
+  ctx.fillText('Authority Chief Executive', 672, footY + 106);
+
+  applyFilterState();
 }
 
-async function loadPortalLicenceInsideApp() {
-  if (!current || !current.proxyDownloadUrl) {
-    return alert('No direct PDF/document link was found on the NMDPRA page for this permit. Use "Upload Licence (Image / PDF)" to view your file inside the app.');
-  }
-  docMeta.textContent = `Loading ${baseName} inside app...`;
-  await renderPdfFromUrl(current.proxyDownloadUrl, `${baseName}.pdf`);
+function drawRuledLine(ctx, x1, y, x2) {
+  ctx.save();
+  ctx.strokeStyle = '#6b7280';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(x1, y);
+  ctx.lineTo(x2, y);
+  ctx.stroke();
+  ctx.restore();
 }
 
 fileInput.addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file) return;
-
-  baseName = sanitizeName(file.name);
   const url = URL.createObjectURL(file);
+
+  activeMode = 'uploaded';
+  certCanvas.style.display = 'none';
+  uploadedWrap.style.display = 'flex';
+  uploadedWrap.innerHTML = '';
+  document.getElementById('stageTitle').textContent = `Uploaded Licence: ${file.name}`;
+  document.getElementById('stageSub').textContent = 'Displayed inside app • Ready for JPEG download or WhatsApp sharing';
 
   try {
     if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
-      docMeta.textContent = `Rendering PDF: ${file.name}`;
-      await renderPdfFromUrl(url, file.name);
+      const pdf = await pdfjsLib.getDocument(url).promise;
+      for (let p = 1; p <= pdf.numPages; p++) {
+        const page = await pdf.getPage(p);
+        const vp = page.getViewport({ scale: 2.0 });
+        const c = document.createElement('canvas');
+        c.width = Math.floor(vp.width);
+        c.height = Math.floor(vp.height);
+        await page.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise;
+        uploadedWrap.appendChild(c);
+      }
     } else {
-      docMeta.textContent = `Image: ${file.name}`;
-      await renderImageFromUrl(url);
+      await new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const c = document.createElement('canvas');
+          c.width = img.naturalWidth || img.width;
+          c.height = img.naturalHeight || img.height;
+          c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+          uploadedWrap.appendChild(c);
+          resolve();
+        };
+        img.onerror = () => reject(new Error('Could not read uploaded image'));
+        img.src = url;
+      });
     }
+    applyFilterState();
     setStatus('ok', `Loaded "${file.name}" inside the app.`);
   } catch (err) {
-    setStatus('err', `Failed to display file: ${err.message}`);
+    setStatus('err', `Could not render file: ${err.message}`);
   } finally {
-    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    setTimeout(() => URL.revokeObjectURL(url), 4000);
   }
 });
 
-function clearCanvases() {
-  canvasWrap.innerHTML = '';
-}
-
-function applyFilterToCanvases() {
-  canvasWrap.querySelectorAll('canvas').forEach((c) => {
-    c.style.filter = enhanced ? SCAN_FILTER : 'none';
-  });
-  modeLabel.textContent = enhanced ? 'View: Enhanced Scan' : 'View: Original';
-}
-
-function toggleEnhancement() {
-  enhanced = !enhanced;
-  applyFilterToCanvases();
-}
-
-function renderImageFromUrl(url) {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = () => {
-      clearCanvases();
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth || img.width;
-      canvas.height = img.naturalHeight || img.height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvasWrap.appendChild(canvas);
-      toolbarEl.style.display = 'flex';
-      enhanced = true;
-      applyFilterToCanvases();
-      resolve();
-    };
-    img.onerror = () => reject(new Error('Could not decode image file'));
-    img.src = url;
+function applyFilterState() {
+  const targets = activeMode === 'certificate'
+    ? [certCanvas]
+    : Array.from(uploadedWrap.querySelectorAll('canvas'));
+  targets.forEach((c) => {
+    c.classList.toggle('scan-filter', scanFilterOn);
   });
 }
 
-async function renderPdfFromUrl(url, label) {
-  if (!window.pdfjsLib) {
-    throw new Error('PDF renderer failed to load');
-  }
-  const loadingTask = pdfjsLib.getDocument(url);
-  const pdf = await loadingTask.promise;
-  clearCanvases();
-
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-    const viewport = page.getViewport({ scale: 2.0 });
-    const canvas = document.createElement('canvas');
-    canvas.width = Math.floor(viewport.width);
-    canvas.height = Math.floor(viewport.height);
-    const ctx = canvas.getContext('2d');
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    canvasWrap.appendChild(canvas);
-  }
-
-  docMeta.textContent = `${label} (${pdf.numPages} page${pdf.numPages > 1 ? 's' : ''})`;
-  toolbarEl.style.display = 'flex';
-  enhanced = true;
-  applyFilterToCanvases();
+function toggleFilter() {
+  scanFilterOn = !scanFilterOn;
+  applyFilterState();
 }
 
 function getExportCanvas() {
-  const canvases = canvasWrap.querySelectorAll('canvas');
-  if (!canvases.length) {
-    alert('Please load or upload a licence inside the app first.');
-    return null;
-  }
-
-  // If multi-page PDF, stack pages vertically into a single sharable/downloadable JPEG
-  if (canvases.length === 1) {
-    const src = canvases[0];
+  if (activeMode === 'certificate') {
     const out = document.createElement('canvas');
-    out.width = src.width;
-    out.height = src.height;
+    out.width = certCanvas.width;
+    out.height = certCanvas.height;
     const ctx = out.getContext('2d');
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, out.width, out.height);
-    ctx.filter = enhanced ? SCAN_FILTER : 'none';
-    ctx.drawImage(src, 0, 0);
+    if (scanFilterOn) ctx.filter = 'contrast(1.25) brightness(1.06)';
+    ctx.drawImage(certCanvas, 0, 0);
     return out;
   }
 
-  const gap = 24;
-  const totalW = Math.max(...Array.from(canvases).map((c) => c.width));
-  const totalH = Array.from(canvases).reduce((sum, c) => sum + c.height, 0) + gap * (canvases.length - 1);
+  const canvases = Array.from(uploadedWrap.querySelectorAll('canvas'));
+  if (!canvases.length) return null;
+  if (canvases.length === 1) {
+    const out = document.createElement('canvas');
+    out.width = canvases[0].width;
+    out.height = canvases[0].height;
+    const ctx = out.getContext('2d');
+    if (scanFilterOn) ctx.filter = 'contrast(1.25) brightness(1.06)';
+    ctx.drawImage(canvases[0], 0, 0);
+    return out;
+  }
 
+  const gap = 20;
+  const totalW = Math.max(...canvases.map((c) => c.width));
+  const totalH = canvases.reduce((s, c) => s + c.height, 0) + gap * (canvases.length - 1);
   const merged = document.createElement('canvas');
   merged.width = totalW;
   merged.height = totalH;
   const ctx = merged.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, totalW, totalH);
-  ctx.filter = enhanced ? SCAN_FILTER : 'none';
-
+  if (scanFilterOn) ctx.filter = 'contrast(1.25) brightness(1.06)';
   let y = 0;
   canvases.forEach((c) => {
-    const x = Math.floor((totalW - c.width) / 2);
-    ctx.drawImage(c, x, y);
+    ctx.drawImage(c, Math.floor((totalW - c.width) / 2), y);
     y += c.height + gap;
   });
-
   return merged;
 }
 
-function canvasToJpegBlob(canvas, quality = 0.92) {
-  return new Promise((resolve) => {
-    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
-  });
+function toJpegBlob(canvas, quality = 0.92) {
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
 }
 
 async function downloadJpeg() {
   const canvas = getExportCanvas();
-  if (!canvas) return;
-
-  const blob = await canvasToJpegBlob(canvas, 0.92);
-  if (!blob) return alert('Could not create JPEG file.');
-
-  const filename = `${baseName}${enhanced ? '_enhanced' : ''}.jpg`;
+  if (!canvas) return alert('Nothing to export.');
+  const blob = await toJpegBlob(canvas, 0.92);
+  const lic = (document.getElementById('licNo').value.trim() || 'nmdpra_licence').replace(/[^a-zA-Z0-9_-]+/g, '_');
+  const filename = `${lic}.jpg`;
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -360,80 +653,33 @@ async function downloadJpeg() {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
-  setStatus('ok', `Saved ${filename}`);
+  setStatus('ok', `Downloaded ${filename}`);
 }
 
 async function shareJpegOnWhatsApp() {
   const canvas = getExportCanvas();
-  if (!canvas) return;
-
-  const blob = await canvasToJpegBlob(canvas, 0.9);
-  if (!blob) return alert('Could not prepare JPEG for sharing.');
-
-  const filename = `${baseName}${enhanced ? '_enhanced' : ''}.jpg`;
+  if (!canvas) return alert('Nothing to share.');
+  const blob = await toJpegBlob(canvas, 0.9);
+  const lic = document.getElementById('licNo').value.trim() || 'NMDPRA Licence';
+  const filename = `${lic.replace(/[^a-zA-Z0-9_-]+/g, '_')}.jpg`;
   const file = new File([blob], filename, { type: 'image/jpeg' });
-  const caption = [
-    `Licence: ${licNoInput.value.trim() || baseName}`,
-    current?.status ? `Status: ${current.status}` : '',
-    current?.company ? `Company: ${current.company}` : ''
-  ].filter(Boolean).join('\n');
+  const text = `Licence: ${lic}\nCompany: ${document.getElementById('fCompany').value.trim() || 'N/A'}\nExpiry: ${document.getElementById('fExpiry').value.trim() || 'N/A'}`;
 
   if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
     try {
-      await navigator.share({
-        title: filename,
-        text: caption,
-        files: [file]
-      });
-      setStatus('ok', `Shared ${filename}.`);
+      await navigator.share({ title: filename, text, files: [file] });
       return;
     } catch (err) {
       if (err && err.name === 'AbortError') return;
     }
   }
 
-  // Fallback for desktop browsers that do not support sharing files directly
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-
-  alert('Direct image sharing is not supported in this browser. The JPEG has been downloaded so you can attach it in WhatsApp.');
-  window.open(
-    'https://wa.me/?text=' + encodeURIComponent(caption),
-    '_blank',
-    'noopener,noreferrer'
-  );
+  await downloadJpeg();
+  window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
 }
 
-function shareWhatsApp() {
-  const lic = licNoInput.value.trim() || baseName;
-  const lines = [
-    `Licence / Permit: ${lic}`,
-    `Status: ${current?.status || 'Checked'}`,
-    current?.company ? `Company: ${current.company}` : '',
-    current?.expiry ? `Expiry: ${current.expiry}` : '',
-    current?.address ? `Address: ${current.address}` : ''
-  ].filter(Boolean);
-
-  window.open(
-    'https://wa.me/?text=' + encodeURIComponent(lines.join('\n')),
-    '_blank',
-    'noopener,noreferrer'
-  );
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
+// Render initial certificate preview on load
+drawCertificate();
 </script>
 </body>
 </html>
