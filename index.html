@@ -4,49 +4,54 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LicenseFresh</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <style>
 *{box-sizing:border-box}
 body{font-family:Arial,sans-serif;background:#eef2f5;margin:0;color:#1f2937}
 .top{background:#0a7a42;color:#fff;padding:20px;text-align:center}
 .top p{margin:6px 0 0;opacity:.92}
-.box{max-width:900px;margin:20px auto;padding:0 15px}
+.box{max-width:920px;margin:20px auto;padding:0 15px}
 .card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
 .row{display:flex;gap:10px;flex-wrap:wrap}
 input[type="text"]{flex:1;min-width:220px;padding:14px;font-size:16px;border:1.5px solid #ddd;border-radius:10px}
 input[type="text"]:focus{outline:none;border-color:#0a7a42}
-button{padding:14px 20px;background:#0a7a42;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer}
+button{padding:13px 18px;background:#0a7a42;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer;font-size:14px}
 button:disabled{opacity:.6;cursor:not-allowed}
 .btn-dirty{background:#0f4c81}
-.btn-toggle{background:#4b5563;padding:10px 14px;font-size:13px}
-.btn-export{background:#111827;padding:10px 14px;font-size:13px}
-.btn-pdf{background:#b91c1c;padding:10px 14px;font-size:13px}
+.btn-dark{background:#111827}
+.btn-muted{background:#4b5563}
+.btn-wa{background:#25D366}
 #status{margin-top:12px;padding:12px;border-radius:10px;display:none;font-size:14px}
-#viewer,#uploadBox{background:#fff;border-radius:12px;margin-top:16px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+#viewer,#docStage{background:#fff;border-radius:12px;margin-top:16px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
 #viewer{display:none}
 .badge{padding:6px 12px;border-radius:20px;font-weight:700;color:#fff;font-size:13px}
 .valid{background:#0a7a42}.expired{background:#e67e22}.notfound,.unknown{background:#c0392b}
-.scan-enhanced{filter:contrast(1.38) brightness(1.18) saturate(1.05)}
-#licImg{width:100%;max-height:720px;object-fit:contain;display:none;margin-top:14px;border-radius:10px;border:1px solid #e5e7eb}
-#pdfViewer{width:100%;height:600px;border:1px solid #ddd;margin-top:14px;border-radius:10px;display:none}
-.preview-bar{display:none;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px}
-.preview-actions{display:flex;gap:8px;flex-wrap:wrap}
+.details-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin:14px 0;background:#f8fafc;padding:14px;border-radius:10px;border:1px solid #e5e7eb}
+.detail-item b{display:block;font-size:12px;color:#6b7280;text-transform:uppercase;margin-bottom:2px}
+.detail-item span{font-size:14px;color:#111827;word-break:break-word}
+.toolbar{display:none;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+#canvasWrap{margin-top:14px;display:flex;flex-direction:column;gap:14px;align-items:center}
+#canvasWrap canvas{max-width:100%;height:auto;border-radius:8px;border:1px solid #d1d5db;box-shadow:0 2px 10px rgba(0,0,0,.06)}
+.scan-filter{filter:contrast(1.35) brightness(1.15) saturate(1.05)}
+.empty-hint{text-align:center;color:#6b7280;padding:28px 12px;font-size:14px}
 </style>
 </head>
 <body>
 <div class="top">
   <h1>LicenseFresh</h1>
-  <p>Verify your NMDPRA License or clean up a dirty licence scan</p>
+  <p>View NMDPRA Licence Details, Render Inside App, Save JPEG &amp; Share on WhatsApp</p>
 </div>
 
 <div class="box">
   <div class="card">
     <label for="licNo"><b>LICENCE / PERMIT NUMBER</b></label>
     <div class="row" style="margin-top:8px">
-      <input id="licNo" type="text" placeholder="e.g. BN14763/2025 (optional if uploading)">
-      <button id="verifyBtn" onclick="verify()">VERIFY →</button>
-      <button type="button" class="btn-dirty" onclick="openDirtyUpload()">🧼 Upload Dirty Licence</button>
+      <input id="licNo" type="text" placeholder="Enter licence/permit number (optional if uploading)">
+      <button id="verifyBtn" type="button" onclick="verify()">VERIFY →</button>
+      <button type="button" class="btn-dirty" onclick="openUpload()">🧼 Upload Licence (Image / PDF)</button>
     </div>
-    <input type="file" id="dirtyFileInput" accept="image/*,.pdf" style="display:none">
+    <input id="fileInput" type="file" accept="image/*,.pdf,application/pdf" style="display:none">
     <div id="status"></div>
   </div>
 
@@ -55,309 +60,365 @@ button:disabled{opacity:.6;cursor:not-allowed}
       <b id="vTitle" style="font-size:18px"></b>
       <span id="vBadge" class="badge"></span>
     </div>
-    <p id="vDetails" style="color:#333;line-height:1.6"></p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button type="button" onclick="downloadLicence()" style="background:#111">⬇ Download & View Licence Inside App</button>
-      <button type="button" onclick="shareWhatsApp()" style="background:#25D366">Share on WhatsApp</button>
+
+    <div class="details-grid" id="vDetails"></div>
+
+    <div class="actions">
+      <button type="button" class="btn-dark" onclick="loadPortalLicenceInsideApp()">📄 Load Licence Inside App</button>
+      <button type="button" class="btn-wa" onclick="shareWhatsApp()">Share on WhatsApp</button>
     </div>
   </div>
 
-  <div id="uploadBox">
+  <div id="docStage">
     <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
-      <b>Dirty Licence Preview & Scan Enhancement</b>
-      <span id="fileNameLabel" style="font-size:13px;color:#666">No file uploaded yet</span>
+      <b>Licence Document Preview (Inside App)</b>
+      <span id="docMeta" style="font-size:13px;color:#6b7280">No licence loaded yet</span>
     </div>
-    <p style="font-size:13px;color:#666;margin:6px 0 0">
-      Upload a dimly lit, shadowed, or dirty licence photo/PDF to view it brightened and higher-contrast right inside the app, then download an enhanced image or export as a clean PDF.
-    </p>
 
-    <div id="previewBar" class="preview-bar">
-      <span id="filterStateText" style="font-size:13px;font-weight:700;color:#0a7a42">Mode: Brightened Scan View</span>
-      <div class="preview-actions">
-        <button type="button" class="btn-toggle" onclick="toggleScanFilter()">Toggle Original / Cleaned View</button>
-        <button type="button" id="dlImgBtn" class="btn-export" onclick="downloadEnhancedImage()">⬇ Download Enhanced Image</button>
-        <button type="button" id="dlPdfBtn" class="btn-pdf" onclick="exportUploadedAsPdf()">📄 Export as Clean PDF</button>
+    <div id="toolbar" class="toolbar">
+      <span id="modeLabel" style="font-size:13px;font-weight:700;color:#0a7a42">View: Enhanced Scan</span>
+      <div class="actions">
+        <button type="button" class="btn-muted" onclick="toggleEnhancement()">Toggle Original / Enhanced</button>
+        <button type="button" class="btn-dark" onclick="downloadJpeg()">⬇ Download JPEG</button>
+        <button type="button" class="btn-wa" onclick="shareJpegOnWhatsApp()">📲 Share JPEG on WhatsApp</button>
       </div>
     </div>
 
-    <iframe id="pdfViewer" title="Licence PDF Viewer"></iframe>
-    <img id="licImg" class="scan-enhanced" alt="Uploaded Licence Preview">
+    <div id="canvasWrap">
+      <div id="emptyHint" class="empty-hint">
+        Upload a licence photo/PDF or click <b>Load Licence Inside App</b> after verifying to view the document here, download it as a JPEG, or share the JPEG on WhatsApp.
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-let current = null;
-let scanEnhanced = true;
-let uploadedBaseName = 'licence';
-const SCAN_CANVAS_FILTER = 'contrast(1.38) brightness(1.18) saturate(1.05)';
-const API = '/api/verify';
+if (window.pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+}
 
-const licInput = document.getElementById('licNo');
+const API = '/api/verify';
+const SCAN_FILTER = 'contrast(1.35) brightness(1.15) saturate(1.05)';
+
+let current = null;
+let enhanced = true;
+let baseName = 'licence';
+
+const licNoInput = document.getElementById('licNo');
 const verifyBtn = document.getElementById('verifyBtn');
+const fileInput = document.getElementById('fileInput');
 const statusEl = document.getElementById('status');
 const viewerEl = document.getElementById('viewer');
-const pdfViewer = document.getElementById('pdfViewer');
-const licImg = document.getElementById('licImg');
-const dirtyFileInput = document.getElementById('dirtyFileInput');
-const fileNameLabel = document.getElementById('fileNameLabel');
-const previewBar = document.getElementById('previewBar');
-const filterStateText = document.getElementById('filterStateText');
+const toolbarEl = document.getElementById('toolbar');
+const canvasWrap = document.getElementById('canvasWrap');
+const docMeta = document.getElementById('docMeta');
+const modeLabel = document.getElementById('modeLabel');
 
-licInput.addEventListener('keydown', (e) => {
+licNoInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') verify();
 });
 
-function openDirtyUpload() {
-  dirtyFileInput.click();
+function openUpload() {
+  fileInput.click();
 }
 
-function setStatus(type, message) {
+function setStatus(type, msg) {
   statusEl.style.display = 'block';
-  if (type === 'info') {
+  if (type === 'ok') {
     statusEl.style.background = '#e6f9ec';
     statusEl.style.color = '#064e2b';
   } else {
     statusEl.style.background = '#ffecec';
     statusEl.style.color = '#7f1d1d';
   }
-  statusEl.textContent = message;
+  statusEl.textContent = msg;
+}
+
+function sanitizeName(name) {
+  return (String(name || 'licence').replace(/\.[^/.]+$/, '') || 'licence')
+    .replace(/[^a-zA-Z0-9_-]+/g, '_');
 }
 
 async function verify() {
-  const lic = licInput.value.trim();
-  if (!lic) {
-    setStatus('error', 'Please enter a licence or permit number to verify.');
+  const permitNo = licNoInput.value.trim();
+  if (!permitNo) {
+    setStatus('err', 'Please enter a licence or permit number, or upload a licence file.');
     return;
   }
 
   verifyBtn.disabled = true;
-  setStatus('info', `Verifying ${lic} from NMDPRA inside LicenseFresh...`);
+  setStatus('ok', `Checking ${permitNo} on NMDPRA...`);
   viewerEl.style.display = 'none';
-  pdfViewer.style.display = 'none';
-  pdfViewer.removeAttribute('src');
 
   try {
-    const r = await fetch(`${API}?permitNo=${encodeURIComponent(lic)}`);
-    const data = await r.json();
+    const res = await fetch(`${API}?permitNo=${encodeURIComponent(permitNo)}`);
+    const data = await res.json();
     current = data;
 
-    if (!r.ok || !data.ok) {
-      setStatus('error', data.error || `✗ NOT FOUND on NMDPRA - ${lic}`);
+    if (!res.ok || !data.ok) {
+      setStatus('err', data.error || `No record found for ${permitNo}.`);
       return;
     }
 
-    setStatus('info', '✓ Verified from NMDPRA');
-    viewerEl.style.display = 'block';
-    document.getElementById('vTitle').textContent = `Licence: ${lic}`;
-
-    const badge = document.getElementById('vBadge');
-    const st = (data.status || 'UNKNOWN').toUpperCase();
-    badge.textContent = st;
-    badge.className = 'badge ' + (
-      st === 'VALID' ? 'valid' :
-      st === 'EXPIRED' ? 'expired' :
-      st === 'NOT FOUND' ? 'notfound' : 'unknown'
-    );
-
-    document.getElementById('vDetails').innerHTML =
-      `<b>Company:</b> ${escapeHtml(data.company || 'See NMDPRA record')}<br>` +
-      `<b>Expiry:</b> ${escapeHtml(data.expiry || 'See NMDPRA record')}<br>` +
-      `<b>Authenticity:</b> Confirmed from celps.nmdpra.gov.ng`;
-  } catch (e) {
-    setStatus('error', `Error: ${e.message} - Backend unavailable or network error.`);
+    setStatus('ok', `Record retrieved for ${permitNo}.`);
+    baseName = sanitizeName(permitNo);
+    renderDetailsCard(permitNo, data);
+  } catch (err) {
+    setStatus('err', `Could not reach verification API: ${err.message}`);
   } finally {
     verifyBtn.disabled = false;
   }
 }
 
-function downloadLicence() {
-  if (!current || !current.proxyDownloadUrl) {
-    return alert('No download link returned by NMDPRA for this licence. Use "Upload Dirty Licence" to view your file inside the app.');
-  }
-  licImg.style.display = 'none';
-  previewBar.style.display = 'none';
-  pdfViewer.style.display = 'block';
-  pdfViewer.src = current.proxyDownloadUrl;
-  pdfViewer.scrollIntoView({ behavior: 'smooth' });
+function renderDetailsCard(permitNo, data) {
+  viewerEl.style.display = 'block';
+  document.getElementById('vTitle').textContent = `Permit / Licence: ${permitNo}`;
+
+  const statusText = (data.status || 'UNKNOWN').toUpperCase();
+  const badge = document.getElementById('vBadge');
+  badge.textContent = statusText;
+  badge.className = 'badge ' + (
+    statusText === 'VALID' ? 'valid' :
+    statusText === 'EXPIRED' ? 'expired' :
+    statusText === 'NOT FOUND' ? 'notfound' : 'unknown'
+  );
+
+  const items = [
+    ['Licence / Permit No.', data.permitNo || permitNo],
+    ['Status', statusText],
+    ['Company Name', data.company || 'Not listed on page'],
+    ['Expiry Date', data.expiry || 'Not listed on page'],
+    ['Facility / Address', data.address || 'Not listed on page'],
+    ['Registry Source', 'celps.nmdpra.gov.ng']
+  ];
+
+  document.getElementById('vDetails').innerHTML = items.map(([k, v]) => `
+    <div class="detail-item">
+      <b>${escapeHtml(k)}</b>
+      <span>${escapeHtml(v)}</span>
+    </div>
+  `).join('');
 }
 
-dirtyFileInput.addEventListener('change', (e) => {
-  const f = e.target.files[0];
-  if (!f) return;
-
-  fileNameLabel.textContent = f.name;
-  uploadedBaseName = (f.name.replace(/\.[^/.]+$/, '') || 'licence').replace(/[^a-zA-Z0-9_-]+/g, '_');
-  const objectUrl = URL.createObjectURL(f);
-
-  if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
-    licImg.style.display = 'none';
-    previewBar.style.display = 'none';
-    pdfViewer.style.display = 'block';
-    pdfViewer.src = objectUrl;
-  } else {
-    pdfViewer.style.display = 'none';
-    pdfViewer.removeAttribute('src');
-    licImg.style.display = 'block';
-    licImg.src = objectUrl;
-    previewBar.style.display = 'flex';
-    applyScanFilter(true);
+async function loadPortalLicenceInsideApp() {
+  if (!current || !current.proxyDownloadUrl) {
+    return alert('No direct PDF/document link was found on the NMDPRA page for this permit. Use "Upload Licence (Image / PDF)" to view your file inside the app.');
   }
+  docMeta.textContent = `Loading ${baseName} inside app...`;
+  await renderPdfFromUrl(current.proxyDownloadUrl, `${baseName}.pdf`);
+}
 
-  setStatus('info', `Loaded "${f.name}" for viewing.`);
+fileInput.addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  baseName = sanitizeName(file.name);
+  const url = URL.createObjectURL(file);
+
+  try {
+    if (file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf')) {
+      docMeta.textContent = `Rendering PDF: ${file.name}`;
+      await renderPdfFromUrl(url, file.name);
+    } else {
+      docMeta.textContent = `Image: ${file.name}`;
+      await renderImageFromUrl(url);
+    }
+    setStatus('ok', `Loaded "${file.name}" inside the app.`);
+  } catch (err) {
+    setStatus('err', `Failed to display file: ${err.message}`);
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
 });
 
-function applyScanFilter(enabled) {
-  scanEnhanced = enabled;
-  licImg.classList.toggle('scan-enhanced', scanEnhanced);
-  filterStateText.textContent = scanEnhanced
-    ? 'Mode: Brightened Scan View'
-    : 'Mode: Original Unfiltered Image';
+function clearCanvases() {
+  canvasWrap.innerHTML = '';
 }
 
-function toggleScanFilter() {
-  applyScanFilter(!scanEnhanced);
+function applyFilterToCanvases() {
+  canvasWrap.querySelectorAll('canvas').forEach((c) => {
+    c.style.filter = enhanced ? SCAN_FILTER : 'none';
+  });
+  modeLabel.textContent = enhanced ? 'View: Enhanced Scan' : 'View: Original';
 }
 
-function renderImageToCanvas() {
-  if (!licImg.src || licImg.style.display === 'none' || !licImg.complete || !licImg.naturalWidth) {
-    alert('Please upload an image licence first.');
+function toggleEnhancement() {
+  enhanced = !enhanced;
+  applyFilterToCanvases();
+}
+
+function renderImageFromUrl(url) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => {
+      clearCanvases();
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth || img.width;
+      canvas.height = img.naturalHeight || img.height;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvasWrap.appendChild(canvas);
+      toolbarEl.style.display = 'flex';
+      enhanced = true;
+      applyFilterToCanvases();
+      resolve();
+    };
+    img.onerror = () => reject(new Error('Could not decode image file'));
+    img.src = url;
+  });
+}
+
+async function renderPdfFromUrl(url, label) {
+  if (!window.pdfjsLib) {
+    throw new Error('PDF renderer failed to load');
+  }
+  const loadingTask = pdfjsLib.getDocument(url);
+  const pdf = await loadingTask.promise;
+  clearCanvases();
+
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const viewport = page.getViewport({ scale: 2.0 });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.floor(viewport.width);
+    canvas.height = Math.floor(viewport.height);
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    canvasWrap.appendChild(canvas);
+  }
+
+  docMeta.textContent = `${label} (${pdf.numPages} page${pdf.numPages > 1 ? 's' : ''})`;
+  toolbarEl.style.display = 'flex';
+  enhanced = true;
+  applyFilterToCanvases();
+}
+
+function getExportCanvas() {
+  const canvases = canvasWrap.querySelectorAll('canvas');
+  if (!canvases.length) {
+    alert('Please load or upload a licence inside the app first.');
     return null;
   }
-  const canvas = document.createElement('canvas');
-  canvas.width = licImg.naturalWidth;
-  canvas.height = licImg.naturalHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.filter = scanEnhanced ? SCAN_CANVAS_FILTER : 'none';
-  ctx.drawImage(licImg, 0, 0, canvas.width, canvas.height);
-  return canvas;
+
+  // If multi-page PDF, stack pages vertically into a single sharable/downloadable JPEG
+  if (canvases.length === 1) {
+    const src = canvases[0];
+    const out = document.createElement('canvas');
+    out.width = src.width;
+    out.height = src.height;
+    const ctx = out.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, out.width, out.height);
+    ctx.filter = enhanced ? SCAN_FILTER : 'none';
+    ctx.drawImage(src, 0, 0);
+    return out;
+  }
+
+  const gap = 24;
+  const totalW = Math.max(...Array.from(canvases).map((c) => c.width));
+  const totalH = Array.from(canvases).reduce((sum, c) => sum + c.height, 0) + gap * (canvases.length - 1);
+
+  const merged = document.createElement('canvas');
+  merged.width = totalW;
+  merged.height = totalH;
+  const ctx = merged.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, totalW, totalH);
+  ctx.filter = enhanced ? SCAN_FILTER : 'none';
+
+  let y = 0;
+  canvases.forEach((c) => {
+    const x = Math.floor((totalW - c.width) / 2);
+    ctx.drawImage(c, x, y);
+    y += c.height + gap;
+  });
+
+  return merged;
 }
 
-function triggerFileDownload(blobOrDataUrl, filename) {
+function canvasToJpegBlob(canvas, quality = 0.92) {
+  return new Promise((resolve) => {
+    canvas.toBlob((blob) => resolve(blob), 'image/jpeg', quality);
+  });
+}
+
+async function downloadJpeg() {
+  const canvas = getExportCanvas();
+  if (!canvas) return;
+
+  const blob = await canvasToJpegBlob(canvas, 0.92);
+  if (!blob) return alert('Could not create JPEG file.');
+
+  const filename = `${baseName}${enhanced ? '_enhanced' : ''}.jpg`;
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = typeof blobOrDataUrl === 'string' ? blobOrDataUrl : URL.createObjectURL(blobOrDataUrl);
+  a.href = url;
   a.download = filename;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  if (typeof blobOrDataUrl !== 'string') {
-    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
-  }
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  setStatus('ok', `Saved ${filename}`);
 }
 
-function downloadEnhancedImage() {
-  const canvas = renderImageToCanvas();
+async function shareJpegOnWhatsApp() {
+  const canvas = getExportCanvas();
   if (!canvas) return;
 
-  canvas.toBlob((blob) => {
-    if (!blob) return alert('Could not export image.');
-    const suffix = scanEnhanced ? '_enhanced' : '_original';
-    triggerFileDownload(blob, `${uploadedBaseName}${suffix}.jpg`);
-    setStatus('info', `Downloaded ${uploadedBaseName}${suffix}.jpg`);
-  }, 'image/jpeg', 0.94);
-}
+  const blob = await canvasToJpegBlob(canvas, 0.9);
+  if (!blob) return alert('Could not prepare JPEG for sharing.');
 
-function exportUploadedAsPdf() {
-  const canvas = renderImageToCanvas();
-  if (!canvas) return;
+  const filename = `${baseName}${enhanced ? '_enhanced' : ''}.jpg`;
+  const file = new File([blob], filename, { type: 'image/jpeg' });
+  const caption = [
+    `Licence: ${licNoInput.value.trim() || baseName}`,
+    current?.status ? `Status: ${current.status}` : '',
+    current?.company ? `Company: ${current.company}` : ''
+  ].filter(Boolean).join('\n');
 
-  const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.92);
-  const pdfBlob = createSinglePageA4PdfFromJpegDataUrl(jpegDataUrl, canvas.width, canvas.height);
-  const suffix = scanEnhanced ? '_clean' : '';
-  triggerFileDownload(pdfBlob, `${uploadedBaseName}${suffix}.pdf`);
-  setStatus('info', `Exported ${uploadedBaseName}${suffix}.pdf`);
-}
-
-function createSinglePageA4PdfFromJpegDataUrl(dataUrl, imgW, imgH) {
-  const base64 = dataUrl.split(',')[1];
-  const binaryStr = atob(base64);
-  const jpgBytes = new Uint8Array(binaryStr.length);
-  for (let i = 0; i < binaryStr.length; i++) {
-    jpgBytes[i] = binaryStr.charCodeAt(i);
+  if (navigator.canShare && navigator.canShare({ files: [file] }) && navigator.share) {
+    try {
+      await navigator.share({
+        title: filename,
+        text: caption,
+        files: [file]
+      });
+      setStatus('ok', `Shared ${filename}.`);
+      return;
+    } catch (err) {
+      if (err && err.name === 'AbortError') return;
+    }
   }
 
-  // A4 size in PDF points (72 pt/inch): 595.28 x 841.89 pt, with a clean 24pt margin
-  const pageW = 595.28;
-  const pageH = 841.89;
-  const margin = 24;
-  const maxW = pageW - margin * 2;
-  const maxH = pageH - margin * 2;
-  const scale = Math.min(maxW / imgW, maxH / imgH);
-  const drawW = (imgW * scale).toFixed(2);
-  const drawH = (imgH * scale).toFixed(2);
-  const drawX = ((pageW - imgW * scale) / 2).toFixed(2);
-  const drawY = ((pageH - imgH * scale) / 2).toFixed(2);
+  // Fallback for desktop browsers that do not support sharing files directly
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
 
-  const contentStream = `q\n${drawW} 0 0 ${drawH} ${drawX} ${drawY} cm\n/Im0 Do\nQ\n`;
-
-  const parts = [];
-  const offsets = [0];
-  let byteLength = 0;
-
-  function pushStr(str) {
-    const encoded = new TextEncoder().encode(str);
-    parts.push(encoded);
-    byteLength += encoded.length;
-  }
-
-  function pushBytes(bytes) {
-    parts.push(bytes);
-    byteLength += bytes.length;
-  }
-
-  pushStr('%PDF-1.4\n');
-
-  // 1: Catalog
-  offsets.push(byteLength);
-  pushStr('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
-
-  // 2: Pages
-  offsets.push(byteLength);
-  pushStr('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
-
-  // 3: Page
-  offsets.push(byteLength);
-  pushStr(
-    `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] ` +
-    `/Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`
+  alert('Direct image sharing is not supported in this browser. The JPEG has been downloaded so you can attach it in WhatsApp.');
+  window.open(
+    'https://wa.me/?text=' + encodeURIComponent(caption),
+    '_blank',
+    'noopener,noreferrer'
   );
-
-  // 4: Image XObject
-  offsets.push(byteLength);
-  pushStr(
-    `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} ` +
-    `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpgBytes.length} >>\nstream\n`
-  );
-  pushBytes(jpgBytes);
-  pushStr('\nendstream\nendobj\n');
-
-  // 5: Content Stream
-  const contentBytes = new TextEncoder().encode(contentStream);
-  offsets.push(byteLength);
-  pushStr(`5 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`);
-  pushBytes(contentBytes);
-  pushStr('endstream\nendobj\n');
-
-  const xrefOffset = byteLength;
-  pushStr(`xref\n0 6\n`);
-  pushStr('0000000000 65535 f \n');
-  for (let i = 1; i <= 5; i++) {
-    pushStr(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
-  }
-
-  pushStr(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
-
-  return new Blob(parts, { type: 'application/pdf' });
 }
 
 function shareWhatsApp() {
-  const lic = licInput.value.trim();
+  const lic = licNoInput.value.trim() || baseName;
   const lines = [
-    'LicenseFresh Verified:',
-    `Licence: ${lic || 'Uploaded File'}`,
-    `Status: ${current?.status || 'Verified'}`
-  ];
-  if (current?.company) lines.push(`Company: ${current.company}`);
-  if (current?.expiry) lines.push(`Expiry: ${current.expiry}`);
+    `Licence / Permit: ${lic}`,
+    `Status: ${current?.status || 'Checked'}`,
+    current?.company ? `Company: ${current.company}` : '',
+    current?.expiry ? `Expiry: ${current.expiry}` : '',
+    current?.address ? `Address: ${current.address}` : ''
+  ].filter(Boolean);
 
   window.open(
     'https://wa.me/?text=' + encodeURIComponent(lines.join('\n')),
