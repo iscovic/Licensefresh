@@ -11,32 +11,42 @@ body{font-family:Arial,sans-serif;background:#eef2f5;margin:0;color:#1f2937}
 .top p{margin:6px 0 0;opacity:.92}
 .box{max-width:900px;margin:20px auto;padding:0 15px}
 .card{background:#fff;border-radius:12px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
-.row{display:flex;gap:10px}
-input[type="text"]{flex:1;padding:14px;font-size:16px;border:1.5px solid #ddd;border-radius:10px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+input[type="text"]{flex:1;min-width:220px;padding:14px;font-size:16px;border:1.5px solid #ddd;border-radius:10px}
 input[type="text"]:focus{outline:none;border-color:#0a7a42}
 button{padding:14px 20px;background:#0a7a42;color:#fff;border:0;border-radius:10px;font-weight:700;cursor:pointer}
 button:disabled{opacity:.6;cursor:not-allowed}
+.btn-dirty{background:#0f4c81}
+.btn-toggle{background:#4b5563;padding:10px 14px;font-size:13px}
+.btn-export{background:#111827;padding:10px 14px;font-size:13px}
+.btn-pdf{background:#b91c1c;padding:10px 14px;font-size:13px}
 #status{margin-top:12px;padding:12px;border-radius:10px;display:none;font-size:14px}
-#viewer{display:none;background:#fff;border-radius:12px;margin-top:16px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+#viewer,#uploadBox{background:#fff;border-radius:12px;margin-top:16px;padding:20px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+#viewer{display:none}
 .badge{padding:6px 12px;border-radius:20px;font-weight:700;color:#fff;font-size:13px}
 .valid{background:#0a7a42}.expired{background:#e67e22}.notfound,.unknown{background:#c0392b}
-#licImg{width:100%;max-height:700px;object-fit:contain;display:none;margin-top:16px;border-radius:10px;filter:contrast(1.15) brightness(1.05)}
-#pdfViewer{width:100%;height:600px;border:1px solid #ddd;margin-top:16px;border-radius:10px;display:none}
+.scan-enhanced{filter:contrast(1.38) brightness(1.18) saturate(1.05)}
+#licImg{width:100%;max-height:720px;object-fit:contain;display:none;margin-top:14px;border-radius:10px;border:1px solid #e5e7eb}
+#pdfViewer{width:100%;height:600px;border:1px solid #ddd;margin-top:14px;border-radius:10px;display:none}
+.preview-bar{display:none;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-top:14px}
+.preview-actions{display:flex;gap:8px;flex-wrap:wrap}
 </style>
 </head>
 <body>
 <div class="top">
   <h1>LicenseFresh</h1>
-  <p>Verify your NMDPRA License here</p>
+  <p>Verify your NMDPRA License or clean up a dirty licence scan</p>
 </div>
 
 <div class="box">
   <div class="card">
     <label for="licNo"><b>LICENCE / PERMIT NUMBER</b></label>
     <div class="row" style="margin-top:8px">
-      <input id="licNo" type="text" placeholder="e.g. BN14763/2025" value="BN14763/2025">
+      <input id="licNo" type="text" placeholder="e.g. BN14763/2025 (optional if uploading)">
       <button id="verifyBtn" onclick="verify()">VERIFY →</button>
+      <button type="button" class="btn-dirty" onclick="openDirtyUpload()">🧼 Upload Dirty Licence</button>
     </div>
+    <input type="file" id="dirtyFileInput" accept="image/*,.pdf" style="display:none">
     <div id="status"></div>
   </div>
 
@@ -47,22 +57,39 @@ button:disabled{opacity:.6;cursor:not-allowed}
     </div>
     <p id="vDetails" style="color:#333;line-height:1.6"></p>
     <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button onclick="downloadLicence()" style="background:#111">⬇ Download & View Licence Inside App</button>
-      <button onclick="shareWhatsApp()" style="background:#25D366">Share on WhatsApp</button>
+      <button type="button" onclick="downloadLicence()" style="background:#111">⬇ Download & View Licence Inside App</button>
+      <button type="button" onclick="shareWhatsApp()" style="background:#25D366">Share on WhatsApp</button>
+    </div>
+  </div>
+
+  <div id="uploadBox">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
+      <b>Dirty Licence Preview & Scan Enhancement</b>
+      <span id="fileNameLabel" style="font-size:13px;color:#666">No file uploaded yet</span>
+    </div>
+    <p style="font-size:13px;color:#666;margin:6px 0 0">
+      Upload a dimly lit, shadowed, or dirty licence photo/PDF to view it brightened and higher-contrast right inside the app, then download an enhanced image or export as a clean PDF.
+    </p>
+
+    <div id="previewBar" class="preview-bar">
+      <span id="filterStateText" style="font-size:13px;font-weight:700;color:#0a7a42">Mode: Brightened Scan View</span>
+      <div class="preview-actions">
+        <button type="button" class="btn-toggle" onclick="toggleScanFilter()">Toggle Original / Cleaned View</button>
+        <button type="button" id="dlImgBtn" class="btn-export" onclick="downloadEnhancedImage()">⬇ Download Enhanced Image</button>
+        <button type="button" id="dlPdfBtn" class="btn-pdf" onclick="exportUploadedAsPdf()">📄 Export as Clean PDF</button>
+      </div>
     </div>
 
     <iframe id="pdfViewer" title="Licence PDF Viewer"></iframe>
-
-    <input type="file" id="fileInput" accept="image/*,.pdf" style="margin-top:16px;display:block">
-    <p style="font-size:13px;color:#666;margin-top:6px">
-      If NMDPRA gives no download link, download manually then upload it here to view inside the app.
-    </p>
-    <img id="licImg" alt="Uploaded Licence Preview">
+    <img id="licImg" class="scan-enhanced" alt="Uploaded Licence Preview">
   </div>
 </div>
 
 <script>
 let current = null;
+let scanEnhanced = true;
+let uploadedBaseName = 'licence';
+const SCAN_CANVAS_FILTER = 'contrast(1.38) brightness(1.18) saturate(1.05)';
 const API = '/api/verify';
 
 const licInput = document.getElementById('licNo');
@@ -71,10 +98,18 @@ const statusEl = document.getElementById('status');
 const viewerEl = document.getElementById('viewer');
 const pdfViewer = document.getElementById('pdfViewer');
 const licImg = document.getElementById('licImg');
+const dirtyFileInput = document.getElementById('dirtyFileInput');
+const fileNameLabel = document.getElementById('fileNameLabel');
+const previewBar = document.getElementById('previewBar');
+const filterStateText = document.getElementById('filterStateText');
 
 licInput.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') verify();
 });
+
+function openDirtyUpload() {
+  dirtyFileInput.click();
+}
 
 function setStatus(type, message) {
   statusEl.style.display = 'block';
@@ -91,7 +126,7 @@ function setStatus(type, message) {
 async function verify() {
   const lic = licInput.value.trim();
   if (!lic) {
-    setStatus('error', 'Please enter a licence or permit number.');
+    setStatus('error', 'Please enter a licence or permit number to verify.');
     return;
   }
 
@@ -137,21 +172,26 @@ async function verify() {
 
 function downloadLicence() {
   if (!current || !current.proxyDownloadUrl) {
-    return alert('No download link returned by NMDPRA for this licence. Use the Upload below with the file you downloaded.');
+    return alert('No download link returned by NMDPRA for this licence. Use "Upload Dirty Licence" to view your file inside the app.');
   }
   licImg.style.display = 'none';
+  previewBar.style.display = 'none';
   pdfViewer.style.display = 'block';
   pdfViewer.src = current.proxyDownloadUrl;
   pdfViewer.scrollIntoView({ behavior: 'smooth' });
 }
 
-document.getElementById('fileInput').addEventListener('change', (e) => {
+dirtyFileInput.addEventListener('change', (e) => {
   const f = e.target.files[0];
   if (!f) return;
+
+  fileNameLabel.textContent = f.name;
+  uploadedBaseName = (f.name.replace(/\.[^/.]+$/, '') || 'licence').replace(/[^a-zA-Z0-9_-]+/g, '_');
   const objectUrl = URL.createObjectURL(f);
 
   if (f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf')) {
     licImg.style.display = 'none';
+    previewBar.style.display = 'none';
     pdfViewer.style.display = 'block';
     pdfViewer.src = objectUrl;
   } else {
@@ -159,14 +199,161 @@ document.getElementById('fileInput').addEventListener('change', (e) => {
     pdfViewer.removeAttribute('src');
     licImg.style.display = 'block';
     licImg.src = objectUrl;
+    previewBar.style.display = 'flex';
+    applyScanFilter(true);
   }
+
+  setStatus('info', `Loaded "${f.name}" for viewing.`);
 });
+
+function applyScanFilter(enabled) {
+  scanEnhanced = enabled;
+  licImg.classList.toggle('scan-enhanced', scanEnhanced);
+  filterStateText.textContent = scanEnhanced
+    ? 'Mode: Brightened Scan View'
+    : 'Mode: Original Unfiltered Image';
+}
+
+function toggleScanFilter() {
+  applyScanFilter(!scanEnhanced);
+}
+
+function renderImageToCanvas() {
+  if (!licImg.src || licImg.style.display === 'none' || !licImg.complete || !licImg.naturalWidth) {
+    alert('Please upload an image licence first.');
+    return null;
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = licImg.naturalWidth;
+  canvas.height = licImg.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.filter = scanEnhanced ? SCAN_CANVAS_FILTER : 'none';
+  ctx.drawImage(licImg, 0, 0, canvas.width, canvas.height);
+  return canvas;
+}
+
+function triggerFileDownload(blobOrDataUrl, filename) {
+  const a = document.createElement('a');
+  a.href = typeof blobOrDataUrl === 'string' ? blobOrDataUrl : URL.createObjectURL(blobOrDataUrl);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  if (typeof blobOrDataUrl !== 'string') {
+    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+  }
+}
+
+function downloadEnhancedImage() {
+  const canvas = renderImageToCanvas();
+  if (!canvas) return;
+
+  canvas.toBlob((blob) => {
+    if (!blob) return alert('Could not export image.');
+    const suffix = scanEnhanced ? '_enhanced' : '_original';
+    triggerFileDownload(blob, `${uploadedBaseName}${suffix}.jpg`);
+    setStatus('info', `Downloaded ${uploadedBaseName}${suffix}.jpg`);
+  }, 'image/jpeg', 0.94);
+}
+
+function exportUploadedAsPdf() {
+  const canvas = renderImageToCanvas();
+  if (!canvas) return;
+
+  const jpegDataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  const pdfBlob = createSinglePageA4PdfFromJpegDataUrl(jpegDataUrl, canvas.width, canvas.height);
+  const suffix = scanEnhanced ? '_clean' : '';
+  triggerFileDownload(pdfBlob, `${uploadedBaseName}${suffix}.pdf`);
+  setStatus('info', `Exported ${uploadedBaseName}${suffix}.pdf`);
+}
+
+function createSinglePageA4PdfFromJpegDataUrl(dataUrl, imgW, imgH) {
+  const base64 = dataUrl.split(',')[1];
+  const binaryStr = atob(base64);
+  const jpgBytes = new Uint8Array(binaryStr.length);
+  for (let i = 0; i < binaryStr.length; i++) {
+    jpgBytes[i] = binaryStr.charCodeAt(i);
+  }
+
+  // A4 size in PDF points (72 pt/inch): 595.28 x 841.89 pt, with a clean 24pt margin
+  const pageW = 595.28;
+  const pageH = 841.89;
+  const margin = 24;
+  const maxW = pageW - margin * 2;
+  const maxH = pageH - margin * 2;
+  const scale = Math.min(maxW / imgW, maxH / imgH);
+  const drawW = (imgW * scale).toFixed(2);
+  const drawH = (imgH * scale).toFixed(2);
+  const drawX = ((pageW - imgW * scale) / 2).toFixed(2);
+  const drawY = ((pageH - imgH * scale) / 2).toFixed(2);
+
+  const contentStream = `q\n${drawW} 0 0 ${drawH} ${drawX} ${drawY} cm\n/Im0 Do\nQ\n`;
+
+  const parts = [];
+  const offsets = [0];
+  let byteLength = 0;
+
+  function pushStr(str) {
+    const encoded = new TextEncoder().encode(str);
+    parts.push(encoded);
+    byteLength += encoded.length;
+  }
+
+  function pushBytes(bytes) {
+    parts.push(bytes);
+    byteLength += bytes.length;
+  }
+
+  pushStr('%PDF-1.4\n');
+
+  // 1: Catalog
+  offsets.push(byteLength);
+  pushStr('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+
+  // 2: Pages
+  offsets.push(byteLength);
+  pushStr('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+
+  // 3: Page
+  offsets.push(byteLength);
+  pushStr(
+    `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] ` +
+    `/Resources << /XObject << /Im0 4 0 R >> >> /Contents 5 0 R >>\nendobj\n`
+  );
+
+  // 4: Image XObject
+  offsets.push(byteLength);
+  pushStr(
+    `4 0 obj\n<< /Type /XObject /Subtype /Image /Width ${imgW} /Height ${imgH} ` +
+    `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpgBytes.length} >>\nstream\n`
+  );
+  pushBytes(jpgBytes);
+  pushStr('\nendstream\nendobj\n');
+
+  // 5: Content Stream
+  const contentBytes = new TextEncoder().encode(contentStream);
+  offsets.push(byteLength);
+  pushStr(`5 0 obj\n<< /Length ${contentBytes.length} >>\nstream\n`);
+  pushBytes(contentBytes);
+  pushStr('endstream\nendobj\n');
+
+  const xrefOffset = byteLength;
+  pushStr(`xref\n0 6\n`);
+  pushStr('0000000000 65535 f \n');
+  for (let i = 1; i <= 5; i++) {
+    pushStr(`${String(offsets[i]).padStart(10, '0')} 00000 n \n`);
+  }
+
+  pushStr(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`);
+
+  return new Blob(parts, { type: 'application/pdf' });
+}
 
 function shareWhatsApp() {
   const lic = licInput.value.trim();
   const lines = [
     'LicenseFresh Verified:',
-    `Licence: ${lic}`,
+    `Licence: ${lic || 'Uploaded File'}`,
     `Status: ${current?.status || 'Verified'}`
   ];
   if (current?.company) lines.push(`Company: ${current.company}`);
