@@ -26,6 +26,7 @@ button:disabled{opacity:.6;cursor:not-allowed}
 .fields-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin-top:14px;padding-top:14px;border-top:1px solid #e5e7eb}
 .field label{display:block;font-size:12px;font-weight:700;color:#4b5563;margin-bottom:4px}
 .field input{width:100%;padding:9px 10px;font-size:13px;border:1px solid #d1d5db;border-radius:8px}
+.raw-box{margin-top:14px;padding:12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;font-size:12px;color:#374151;white-space:pre-wrap;max-height:180px;overflow:auto;display:none}
 .toolbar{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:14px}
 .actions{display:flex;gap:8px;flex-wrap:wrap}
 #certWrap{display:flex;flex-direction:column;align-items:center;gap:14px}
@@ -53,38 +54,42 @@ button:disabled{opacity:.6;cursor:not-allowed}
     <div class="fields-grid">
       <div class="field">
         <label for="fCompany">Company Name</label>
-        <input id="fCompany" type="text" placeholder="e.g. NNPC RETAIL LTD">
+        <input id="fCompany" type="text" placeholder="Returned from NMDPRA">
       </div>
       <div class="field">
         <label for="fCic">Company ID Code</label>
-        <input id="fCic" type="text" placeholder="e.g. 0002114">
+        <input id="fCic" type="text" placeholder="Returned from NMDPRA">
       </div>
       <div class="field">
         <label for="fCompanyAddr">Company Address ("of")</label>
-        <input id="fCompanyAddr" type="text" placeholder="Street, Zone, City, State">
+        <input id="fCompanyAddr" type="text" placeholder="Returned from NMDPRA">
       </div>
       <div class="field">
         <label for="fProducts">Storage &amp; Products</label>
-        <input id="fProducts" type="text" placeholder="e.g. 45,000 litres of DPK; 45,000 litres of AGO; 135,000 litres of PMS">
+        <input id="fProducts" type="text" placeholder="Returned from NMDPRA">
       </div>
       <div class="field">
         <label for="fPremises">Premises Address ("at")</label>
-        <input id="fPremises" type="text" placeholder="Premises location & State">
+        <input id="fPremises" type="text" placeholder="Returned from NMDPRA">
       </div>
       <div class="field">
         <label for="fDated">Dated Line</label>
-        <input id="fDated" type="text" placeholder="e.g. Saturday, 29   Day of   MARCH 2025">
+        <input id="fDated" type="text" placeholder="Returned from NMDPRA">
       </div>
       <div class="field">
         <label for="fFee">Fee (₦)</label>
-        <input id="fFee" type="text" placeholder="e.g. 101,250.00 (One Hundred and One Thousand, Two Hundred and Fifty)">
+        <input id="fFee" type="text" placeholder="Returned from NMDPRA">
       </div>
       <div class="field">
         <label for="fExpiry">Expiry Date</label>
-        <input id="fExpiry" type="text" placeholder="e.g. 31 DECEMBER, 2026">
+        <input id="fExpiry" type="text" placeholder="Returned from NMDPRA">
       </div>
     </div>
-    <div style="margin-top:10px;display:flex;justify-content:flex-end">
+
+    <div id="rawExcerptBox" class="raw-box"></div>
+
+    <div style="margin-top:10px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+      <button type="button" class="btn-muted" onclick="toggleRaw()">Show / Hide NMDPRA Raw Text</button>
       <button type="button" class="btn-muted" onclick="drawCertificate()">↻ Refresh Certificate Preview</button>
     </div>
   </div>
@@ -120,11 +125,14 @@ const certCanvas = document.getElementById('certCanvas');
 const uploadedWrap = document.getElementById('uploadedWrap');
 const fileInput = document.getElementById('fileInput');
 const statusEl = document.getElementById('status');
+const rawExcerptBox = document.getElementById('rawExcerptBox');
 
 let activeMode = 'certificate'; // 'certificate' | 'uploaded'
 let scanFilterOn = true;
 
-['licNo','fCompany','fCic','fCompanyAddr','fProducts','fPremises','fDated','fFee','fExpiry'].forEach((id) => {
+const fieldIds = ['fCompany','fCic','fCompanyAddr','fProducts','fPremises','fDated','fFee','fExpiry'];
+
+['licNo', ...fieldIds].forEach((id) => {
   const el = document.getElementById(id);
   el.addEventListener('input', () => {
     if (activeMode === 'certificate') drawCertificate();
@@ -135,6 +143,19 @@ let scanFilterOn = true;
     });
   }
 });
+
+function clearLiveFields() {
+  fieldIds.forEach((id) => {
+    document.getElementById(id).value = '';
+  });
+}
+
+function toggleRaw() {
+  if (!rawExcerptBox.textContent.trim()) {
+    rawExcerptBox.textContent = 'No NMDPRA response text captured yet. Click VERIFY & RENDER with a licence number.';
+  }
+  rawExcerptBox.style.display = rawExcerptBox.style.display === 'block' ? 'none' : 'block';
+}
 
 function openUpload() {
   fileInput.click();
@@ -153,33 +174,55 @@ function switchToCertificateMode() {
   certCanvas.style.display = 'block';
   document.getElementById('stageTitle').textContent = 'Petroleum Storage And Sales License Preview';
   document.getElementById('stageSub').textContent = 'Rendered inside app • Ready for JPEG download or WhatsApp sharing';
-  drawCertificate();
 }
 
 async function verify() {
   const permitNo = document.getElementById('licNo').value.trim();
   const btn = document.getElementById('verifyBtn');
   btn.disabled = true;
-  setStatus('ok', permitNo ? `Checking ${permitNo} on NMDPRA...` : 'Rendering certificate template...');
+  clearLiveFields();
+  rawExcerptBox.textContent = '';
   switchToCertificateMode();
 
-  try {
-    if (permitNo) {
-      const res = await fetch(`${API}?permitNo=${encodeURIComponent(permitNo)}`);
-      const data = await res.json();
-      if (res.ok && data.ok) {
-        if (data.company) document.getElementById('fCompany').value = data.company;
-        if (data.expiry) document.getElementById('fExpiry').value = data.expiry;
-        if (data.address) document.getElementById('fPremises').value = data.address;
-        setStatus('ok', `Retrieved record for ${permitNo} and updated certificate preview.`);
-      } else {
-        setStatus('err', data.error || `No live record returned for ${permitNo}; showing certificate with entered details.`);
-      }
-    }
-  } catch (err) {
-    setStatus('err', `Lookup note: ${err.message}. Certificate preview is still available.`);
-  } finally {
+  if (!permitNo) {
     drawCertificate();
+    setStatus('ok', 'Blank certificate rendered. Enter a licence number to fetch from NMDPRA or type details above.');
+    btn.disabled = false;
+    return;
+  }
+
+  setStatus('ok', `Fetching ${permitNo} from NMDPRA...`);
+  drawCertificate();
+
+  try {
+    const res = await fetch(`${API}?permitNo=${encodeURIComponent(permitNo)}`);
+    const data = await res.json();
+
+    if (data.rawExcerpt) {
+      rawExcerptBox.textContent = `Status: ${data.status || 'UNKNOWN'}\n\n` + data.rawExcerpt;
+    }
+
+    if (!res.ok || !data.ok) {
+      setStatus('err', data.error || `No record returned by NMDPRA for ${permitNo}.`);
+      drawCertificate();
+      return;
+    }
+
+    document.getElementById('fCompany').value = data.company || '';
+    document.getElementById('fCic').value = data.cic || '';
+    document.getElementById('fCompanyAddr').value = data.companyAddress || '';
+    document.getElementById('fProducts').value = data.products || '';
+    document.getElementById('fPremises').value = data.premises || '';
+    document.getElementById('fDated').value = data.dated || '';
+    document.getElementById('fFee').value = data.fee || '';
+    document.getElementById('fExpiry').value = data.expiry || '';
+
+    drawCertificate();
+    setStatus('ok', `Updated certificate with NMDPRA response for ${permitNo} (${data.status || 'CHECKED'}).`);
+  } catch (err) {
+    setStatus('err', `Could not fetch from NMDPRA: ${err.message}`);
+    drawCertificate();
+  } finally {
     btn.disabled = false;
   }
 }
@@ -189,14 +232,12 @@ function drawWatermarkCoatOfArms(ctx, cx, cy) {
   ctx.globalAlpha = 0.14;
   ctx.translate(cx, cy);
 
-  // Supporters (left & right stylized horses)
   ctx.fillStyle = '#9ca3af';
   ctx.beginPath();
   ctx.ellipse(-150, -25, 42, 95, -0.25, 0, Math.PI * 2);
   ctx.ellipse(150, -25, 42, 95, 0.25, 0, Math.PI * 2);
   ctx.fill();
 
-  // Shield
   ctx.beginPath();
   ctx.moveTo(-72, -65);
   ctx.lineTo(72, -65);
@@ -210,7 +251,6 @@ function drawWatermarkCoatOfArms(ctx, cx, cy) {
   ctx.strokeStyle = '#6b7280';
   ctx.stroke();
 
-  // Black Y-pall inside shield
   ctx.strokeStyle = '#4b5563';
   ctx.lineWidth = 14;
   ctx.beginPath();
@@ -221,7 +261,6 @@ function drawWatermarkCoatOfArms(ctx, cx, cy) {
   ctx.lineTo(0, 92);
   ctx.stroke();
 
-  // Base ribbon
   ctx.fillStyle = '#e5e7eb';
   ctx.fillRect(-135, 112, 270, 26);
   ctx.font = 'bold 12px Arial';
@@ -236,7 +275,6 @@ function drawNmdpraEmblem(ctx, cx, cy) {
   ctx.save();
   ctx.translate(cx, cy);
 
-  // Outer gear teeth
   const teeth = 16;
   ctx.fillStyle = '#d4af37';
   for (let i = 0; i < teeth; i++) {
@@ -247,7 +285,6 @@ function drawNmdpraEmblem(ctx, cx, cy) {
     ctx.restore();
   }
 
-  // Gear ring
   ctx.beginPath();
   ctx.arc(0, 0, 32, 0, Math.PI * 2);
   ctx.fillStyle = '#15803d';
@@ -256,13 +293,11 @@ function drawNmdpraEmblem(ctx, cx, cy) {
   ctx.strokeStyle = '#eab308';
   ctx.stroke();
 
-  // Inner circle
   ctx.beginPath();
   ctx.arc(0, 0, 20, 0, Math.PI * 2);
   ctx.fillStyle = '#ffffff';
   ctx.fill();
 
-  // Flame / drop icon
   ctx.beginPath();
   ctx.moveTo(0, -13);
   ctx.quadraticCurveTo(11, 2, 0, 13);
@@ -341,20 +376,15 @@ function drawCertificate() {
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, w, h);
 
-  // Outer & inner border frame
   ctx.strokeStyle = '#111827';
   ctx.lineWidth = 4;
   ctx.strokeRect(24, 24, w - 48, h - 48);
   ctx.lineWidth = 1.5;
   ctx.strokeRect(32, 32, w - 64, h - 64);
 
-  // Central watermark
   drawWatermarkCoatOfArms(ctx, w / 2, h / 2 - 20);
-
-  // Top emblem
   drawNmdpraEmblem(ctx, w / 2, 105);
 
-  // Titles
   ctx.textAlign = 'center';
   ctx.fillStyle = '#111827';
   ctx.font = 'bold 20px "Times New Roman", Georgia, serif';
@@ -367,46 +397,35 @@ function drawCertificate() {
   ctx.font = 'bold 25px "Times New Roman", Georgia, serif';
   ctx.fillText('Petroleum Storage And Sales License', w / 2, 268);
 
-  const licNo = document.getElementById('licNo').value.trim() || 'BR139739/2025';
-  const cic = document.getElementById('fCic').value.trim() || '0002114';
-  const company = document.getElementById('fCompany').value.trim() || 'NNPC RETAIL LTD';
-  const companyAddr = document.getElementById('fCompanyAddr').value.trim() || 'PLOT 2610, OFF YAKUBU GOWON WAY, CADASTRAL ZONE A04 ASOKORO, ABUJA FCT, LAGOS STATE';
-  const products = document.getElementById('fProducts').value.trim() || '45,000 (FORTY FIVE THOUSAND litres of DPK); 45,000 (FORTY FIVE THOUSAND litres of AGO); 135,000 (ONE HUNDRED AND THIRTY FIVE THOUSAND litres of PMS)';
-  const premises = document.getElementById('fPremises').value.trim() || 'ALONG AJAO ESTATE EJIGBO LINK ROAD, EJIGBO LAGOS STATE';
-  const dated = document.getElementById('fDated').value.trim() || 'Saturday, 29          Day of          MARCH 2025';
-  const fee = document.getElementById('fFee').value.trim() || '101,250.00 (One Hundred and One Thousand, Two Hundred and Fifty)';
-  const expiry = document.getElementById('fExpiry').value.trim() || '31 DECEMBER, 2026';
+  const licNo = document.getElementById('licNo').value.trim();
+  const cic = document.getElementById('fCic').value.trim();
+  const company = document.getElementById('fCompany').value.trim();
+  const companyAddr = document.getElementById('fCompanyAddr').value.trim();
+  const products = document.getElementById('fProducts').value.trim();
+  const premises = document.getElementById('fPremises').value.trim();
+  const dated = document.getElementById('fDated').value.trim();
+  const fee = document.getElementById('fFee').value.trim();
+  const expiry = document.getElementById('fExpiry').value.trim();
 
-  // Licence No & CIC right block
   ctx.textAlign = 'left';
   ctx.fillStyle = '#111827';
   ctx.font = '15px "Times New Roman", Georgia, serif';
   ctx.fillText('Licence No:', 490, 312);
   ctx.font = 'bold 16px "Times New Roman", Georgia, serif';
-  ctx.fillText(licNo, 610, 312);
-  ctx.strokeStyle = '#6b7280';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(572, 316);
-  ctx.lineTo(820, 316);
-  ctx.stroke();
+  ctx.fillText(licNo, 582, 312);
+  drawRuledLine(ctx, 572, 316, 820);
 
   ctx.font = 'bold 15px "Times New Roman", Georgia, serif';
   ctx.fillText('Company Identification Code:', 435, 342);
-  ctx.fillText(cic, 675, 342);
-  ctx.beginPath();
-  ctx.moveTo(652, 346);
-  ctx.lineTo(820, 346);
-  ctx.stroke();
+  ctx.fillText(cic, 662, 342);
+  drawRuledLine(ctx, 652, 346, 820);
 
-  // Grant line
   ctx.font = '15px "Times New Roman", Georgia, serif';
   ctx.fillText('Licence is hereby granted to:', 80, 386);
   ctx.font = 'bold italic 16px "Times New Roman", Georgia, serif';
   ctx.fillText(company, 285, 386);
   drawRuledLine(ctx, 80, 392, 820);
 
-  // "of" company address
   ctx.font = '15px "Times New Roman", Georgia, serif';
   ctx.fillText('of', 80, 428);
   ctx.font = 'bold 15px "Times New Roman", Georgia, serif';
@@ -417,7 +436,6 @@ function drawCertificate() {
   }
   drawRuledLine(ctx, 80, 464, 820);
 
-  // Storage of products
   ctx.font = '15px "Times New Roman", Georgia, serif';
   ctx.fillText('for the Storage of', 80, 496);
   const prodParts = products.split(';').map((s) => s.trim()).filter(Boolean);
@@ -439,7 +457,6 @@ function drawCertificate() {
   ctx.fillStyle = '#4b5563';
   ctx.fillText('Name(s) of Product', w / 2, rowY + 12);
 
-  // Premises "at"
   const premY = rowY + 52;
   ctx.textAlign = 'left';
   ctx.fillStyle = '#111827';
@@ -458,7 +475,6 @@ function drawCertificate() {
   ctx.fillStyle = '#4b5563';
   ctx.fillText('Address of Premises', w / 2, premY + 54);
 
-  // Statutory paragraph
   const legalY = premY + 86;
   ctx.textAlign = 'left';
   ctx.fillStyle = '#111827';
@@ -474,7 +490,6 @@ function drawCertificate() {
     ctx.fillText(line, 80, legalY + idx * 19);
   });
 
-  // Dated, Fee, Expiry
   const metaY = legalY + 125;
   ctx.font = '15px "Times New Roman", Georgia, serif';
   ctx.fillText('Dated', 80, metaY);
@@ -492,19 +507,8 @@ function drawCertificate() {
   ctx.fillText(expiry, 210, metaY + 68);
   drawRuledLine(ctx, 200, metaY + 73, 820);
 
-  // Bottom QR & Authority Chief Executive signature
   const footY = metaY + 95;
   drawQrMock(ctx, 85, footY, 125, `${licNo}|${company}|${expiry}`);
-
-  ctx.save();
-  ctx.strokeStyle = '#1d4ed8';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.moveTo(575, footY + 62);
-  ctx.bezierCurveTo(600, footY + 25, 615, footY + 85, 635, footY + 42);
-  ctx.bezierCurveTo(655, footY + 20, 675, footY + 72, 710, footY + 48);
-  ctx.stroke();
-  ctx.restore();
 
   ctx.strokeStyle = '#111827';
   ctx.lineWidth = 1.2;
@@ -678,7 +682,6 @@ async function shareJpegOnWhatsApp() {
   window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank', 'noopener,noreferrer');
 }
 
-// Render initial certificate preview on load
 drawCertificate();
 </script>
 </body>
