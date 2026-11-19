@@ -23,21 +23,20 @@ export default async function handler(req, res) {
     const r = await fetch(targetUrl.href, {
       headers: {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "Referer": `https://${ALLOWED_HOST}/`,
+        "Referer": `https://${ALLOWED_HOST}/Permit/VerifyPermit`,
       },
     });
 
     if (!r.ok) {
-      return res.status(r.status).send(`Upstream download failed (${r.status})`);
+      return res.status(r.status).send(`Upstream fetch failed (${r.status})`);
     }
 
-    const contentType = r.headers.get("content-type") || "application/pdf";
+    const contentType = r.headers.get("content-type") || "application/octet-stream";
     const buf = Buffer.from(await r.arrayBuffer());
 
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Content-Disposition", 'inline; filename="licence.pdf"');
     return res.status(200).send(buf);
   } catch (e) {
-    return res.status(500).send("Download failed: " + e.message);
+    return res.status(500).send("Fetch failed: " + e.message);
   }
 }
