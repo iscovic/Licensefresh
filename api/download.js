@@ -1,15 +1,43 @@
-// api/download.js - proxies the PDF so browser doesn't leave LicenseFresh
+const ALLOWED_HOST = "celps.nmdpra.gov.ng";
+
 export default async function handler(req, res) {
-  const url = req.query.url;
-  if (!url) return res.status(400).send('No URL');
+  res.setHeader("Access-Control-Allow-Origin", "*");
+
+  const rawUrl = req.query.url;
+  if (!rawUrl) {
+    return res.status(400).send("No URL");
+  }
+
+  let targetUrl;
   try {
-    const r = await fetch(url, { headers: { 'User-Agent': 'Mozilla/5.0' } });
-    const buf = await r.arrayBuffer();
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', 'inline; filename="licence.pdf"');
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.send(Buffer.from(buf));
+    targetUrl = new URL(rawUrl);
+  } catch {
+    return res.status(400).send("Invalid URL");
+  }
+
+  if (targetUrl.protocol !== "https:" || targetUrl.hostname !== ALLOWED_HOST) {
+    return res.status(403).send("Forbidden host");
+  }
+
+  try {
+    const r = await fetch(targetUrl.href, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        "Referer": `https://${ALLOWED_HOST}/`,
+      },
+    });
+
+    if (!r.ok) {
+      return res.status(r.status).send(`Upstream download failed (${r.status})`);
+    }
+
+    const contentType = r.headers.get("content-type") || "application/pdf";
+    const buf = Buffer.from(await r.arrayBuffer());
+
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("Content-Disposition", 'inline; filename="licence.pdf"');
+    return res.status(200).send(buf);
   } catch (e) {
-    res.status(500).send('Download failed: ' + e.message);
+    return res.status(500).send("Download failed: " + e.message);
   }
 }
