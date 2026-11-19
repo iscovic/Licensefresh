@@ -33,28 +33,23 @@ function extractAntiForgeryToken(html) {
   return m ? m[1] : "";
 }
 
-function extractMatch(text, patterns) {
-  for (const re of patterns) {
-    const m = text.match(re);
-    if (m && m[1]) {
-      const val = clean(m[1]);
-      if (val) return val;
-    }
-  }
-  return "";
-}
-
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   const permitNo = clean(req.query.permitNo);
   if (!permitNo) {
-    return res.status(400).json({ ok: false, error: "No permit number supplied" });
+    return res.status(400).json({
+      ok: false,
+      error: "No permit number supplied",
+    });
   }
 
   try {
-    // 1. GET VerifyPermit for anti-forgery token & cookies
-    const initRes = await fetch(VERIFY_ENDPOINT, { headers: BROWSER_HEADERS });
+    // 1. GET VerifyPermit to get anti-forgery token and session cookies
+    const initRes = await fetch(VERIFY_ENDPOINT, {
+      headers: BROWSER_HEADERS,
+    });
+
     if (!initRes.ok) {
       return res.status(502).json({
         ok: false,
@@ -66,10 +61,12 @@ export default async function handler(req, res) {
     const initHtml = await initRes.text();
     const token = extractAntiForgeryToken(initHtml);
 
-    // 2. POST LicenseNo and follow redirects (e.g., ExternalViewPermit -> roms.nmdpra.gov.ng/...)
+    // 2. POST LicenseNo and follow redirects to ExternalViewPermit -> roms.nmdpra.gov.ng/Application/ViewLicense/<id>
     const body = new URLSearchParams();
     body.set("LicenseNo", permitNo);
-    if (token) body.set("__RequestVerificationToken", token);
+    if (token) {
+      body.set("__RequestVerificationToken", token);
+    }
 
     const postHeaders = {
       ...BROWSER_HEADERS,
@@ -78,122 +75,74 @@ export default async function handler(req, res) {
       "Origin": BASE_URL,
       "X-Requested-With": "XMLHttpRequest",
     };
-    if (cookieHeader) postHeaders.Cookie = cookieHeader;
+    if (cookieHeader) {
+      postHeaders.Cookie = cookieHeader;
+    }
 
-    const finalRes = await fetch(VERIFY_ENDPOINT, {
+    const postRes = await fetch(VERIFY_ENDPOINT, {
       method: "POST",
       headers: postHeaders,
       body: body.toString(),
-      redirect: "follow",
+      redirect: "manual",
     });
 
-    const finalUrl = finalRes.url || VERIFY_ENDPOINT;
-    const finalContentType = finalRes.headers.get("content-type") || "";
-
-    // If the redirected final response is directly a PDF
-    if (finalContentType.toLowerCase().includes("application/pdf")) {
-      return res.status(200).json({
-        ok: true,
-        permitNo,
-        status: "VALID",
-        finalUrl,
-        proxyPdfUrl: `/api/download?url=${encodeURIComponent(finalUrl)}`,
-      });
+    // Some endpoints return a 302 Location header (e.g., /Permit/ExternalViewPermit?id=...&code=...)
+    let nextUrl = postRes.headers.get("location") || "";
+    if (nextUrl) {
+      nextUrl = new URL(nextUrl, VERIFY_ENDPOINT).href;
     }
 
-    // If the redirected final response is directly an image
-    if (finalContentType.toLowerCase().startsWith("image/")) {
-      return res.status(200).json({
-        ok: true,
-        permitNo,
-        status: "VALID",
-        finalUrl,
-        proxyImageUrl: `/api/download?url=${encodeURIComponent(finalUrl)}`,
-      });
-    }
-
-    const rawResponse = await finalRes.text();
-
-    // Check if JSON
-    try {
-      const json = JSON.parse(rawResponse);
-      const flat = JSON.stringify(json);
-      const isNotFound = /not found|invalid|no record/i.test(flat);
-      const isExpired = /\bexpired\b/i.test(flat);
-      const directDoc = json.url || json.pdfUrl || json.downloadUrl || json.certificateUrl || "";
-      let proxyPdfUrl = "";
-      if (directDoc) {
-        try {
-          const abs = new URL(directDoc, finalUrl).href;
-          proxyPdfUrl = `/api/download?url=${encodeURIComponent(abs)}`;
-        } catch {}
+    // If POST itself returned HTML containing a redirect or ViewLicense URL
+    let postHtml = "";
+    if (!nextUrl) {
+      postHtml = await postRes.text();
+      const viewLicenseMatch = postHtml.match(
+        /(https?:\/\/roms\.nmdpra\.gov\.ng\/Application\/ViewLicense\/[^\s"'<>]+|\/Application\/ViewLicense\/[^\s"'<>]+|ExternalViewPermit\?[^\s"'<>]+)/i
+      );
+      if (viewLicenseMatch && viewLicenseMatch[1]) {
+        nextUrl = new URL(viewLicenseMatch[1], VERIFY_ENDPOINT).href;
       }
+    }
 
-      return res.status(200).json({
-        ok: !isNotFound,
-        permitNo,
-        status: isNotFound ? "NOT FOUND" : isExpired ? "EXPIRED" : "VALID",
-        finalUrl,
-        proxyPdfUrl,
-        company: clean(json.companyName || json.CompanyName || json.applicant || ""),
-        expiry: clean(json.expiryDate || json.ExpiryDate || json.validUntil || ""),
-        address: clean(json.address || json.Address || json.facilityAddress || ""),
-        rawExcerpt: JSON.stringify(json).slice(0, 1500),
+    // Follow ExternalViewPermit if present to get the final /Application/ViewLicense/<id> URL
+    let finalLicenseUrl = "";
+    if (nextUrl) {
+      const followRes = await fetch(nextUrl, {
+        headers: {
+          ...BROWSER_HEADERS,
+          "Referer": VERIFY_ENDPOINT,
+          ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+        },
+        redirect: "follow",
       });
-    } catch {}
+      finalLicenseUrl = followRes.url || nextUrl;
+    }
 
-    const text = rawResponse
+    // Fallback if a numeric/alphanumeric licence ID was extracted from finalLicenseUrl
+    if (finalLicenseUrl) {
+      return res.status(200).json({
+        ok: true,
+        permitNo,
+        finalUrl: finalLicenseUrl,
+        proxyPdfUrl: `/api/download?url=${encodeURIComponent(finalLicenseUrl)}`,
+      });
+    }
+
+    const plainText = postHtml
       .replace(/<script[\s\S]*?<\/script>/gi, " ")
       .replace(/<style[\s\S]*?<\/style>/gi, " ")
-      .replace(/<\/(tr|p|div|li|h[1-6]|dt|dd|br)>/gi, "\n")
-      .replace(/<\/(td|th)>/gi, " : ")
       .replace(/<[^>]+>/g, " ")
-      .replace(/&nbsp;/gi, " ")
-      .replace(/&amp;/gi, "&")
-      .replace(/[ \t]+/g, " ")
-      .replace(/\n\s*\n+/g, "\n")
+      .replace(/\s+/g, " ")
       .trim();
 
-    const flatText = text.replace(/\n+/g, " ");
-    const isNotFound = /not found|invalid permit|no record|does not exist|not filled correctly/i.test(flatText);
-    const isExpired = /\bexpired\b/i.test(flatText);
-
-    // Look for embedded PDF/iframe/object/embed or image links on the final page
-    let proxyPdfUrl = "";
-    const docMatch = rawResponse.match(
-      /(?:href|src|data)=["']([^"']*(?:\.pdf|pdf|certificate|permit|print|view)[^"']*)["']/i
-    );
-    if (docMatch && docMatch[1]) {
-      try {
-        const absDoc = new URL(docMatch[1], finalUrl).href;
-        proxyPdfUrl = `/api/download?url=${encodeURIComponent(absDoc)}`;
-      } catch {}
-    }
-
-    const company = extractMatch(flatText, [
-      /Company\s*Name\s*[:\-]?\s*([A-Za-z0-9&.,'()\- ]{2,90}?)(?=\s+(?:Address|Permit|Licence|License|Expiry|Expiration|Issue|Valid|Status|Category|Facility|State|LGA)\b|$)/i,
-      /Applicant(?:\s*Name)?\s*[:\-]?\s*([A-Za-z0-9&.,'()\- ]{2,90}?)(?=\s+(?:Address|Permit|Licence|License|Expiry|Expiration|Issue|Valid|Status|Category|Facility|State|LGA)\b|$)/i,
-    ]);
-
-    const expiry = extractMatch(flatText, [
-      /(?:Expiry|Expiration)\s*Date\s*[:\-]?\s*([A-Za-z0-9,\/\-\s]{4,40}?)(?=\s+(?:Status|Company|Permit|Fee)\b|$)/i,
-      /Valid\s*(?:Until|To)\s*[:\-]?\s*([A-Za-z0-9,\/\-\s]{4,40}?)(?=\s+(?:Status|Company|Permit|Fee)\b|$)/i,
-    ]);
-
-    const address = extractMatch(flatText, [
-      /(?:Address\s*of\s*Premises|Premises\s*Address|Facility\s*Address|Address|Location)\s*[:\-]?\s*([A-Za-z0-9&.,'()\/\-\s]{4,120}?)(?=\s+(?:Expiry|Expiration|Issue|Valid|Status|Product|Fee|State|LGA)\b|$)/i,
-    ]);
+    const isNotFound = /not found|invalid permit|no record|does not exist|not filled correctly/i.test(plainText);
 
     return res.status(200).json({
-      ok: !isNotFound,
+      ok: false,
       permitNo,
-      status: isNotFound ? "NOT FOUND" : isExpired ? "EXPIRED" : "VALID",
-      finalUrl,
-      proxyPdfUrl,
-      company,
-      expiry,
-      address,
-      rawExcerpt: text.slice(0, 1500),
+      error: isNotFound
+        ? `No licence record found on NMDPRA for ${permitNo}`
+        : "Could not resolve the final ViewLicense PDF URL from NMDPRA",
     });
   } catch (error) {
     return res.status(500).json({
